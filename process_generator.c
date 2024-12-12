@@ -1,10 +1,10 @@
-//#include "headers.h"
+#include "headers.h"
 #include "queue.h"
 void clearResources(int);
-
+int msg_qid;
 int main(int argc, char *argv[])
 {
-    //signal(SIGINT, clearResources); Uncomment when finished with the handler
+    signal(SIGINT, clearResources);
     // TODO Initialization
     // 1. Read the input files.
     struct queue* Processes_Queue = (struct queue*)malloc(sizeof(struct queue));
@@ -14,12 +14,12 @@ int main(int argc, char *argv[])
     int quantum = -1;
     char *arg[] = {"./clk", NULL};
     char *arg2[] = {"./scheduler", argv[3], "-1", NULL};
-
-
+    key_t msg_id=ftok("keyfile",2);
+    msg_id=msgget(msg_id,0666|IPC_CREAT);
     if (argc < 4)
     {
         printf("Not enough information provided, cannot simulate.\n");
-        exit(-1);
+        exit(-1); 
     }
     else
     {
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
         {
             struct processData* process = (struct processData*)malloc(sizeof(struct processData));
             init_process(id, arrival_time, run_time, priority, process);
-            struct node *Node = (struct node*)malloc(sizeof(struct node)); 
+            struct node *Node = (struct node *)malloc(sizeof(struct node)); 
             Node->item = *process; 
             Node->next = NULL;                
             enqueue(Node, Processes_Queue);
@@ -98,7 +98,12 @@ int main(int argc, char *argv[])
         fclose(file); 
         //Now we have the Processes and the correct scheduling algorithm with its corresponding parameters if needed
     }
-     
+
+    
+    
+   
+    
+    
     // 3. Initiate and create the scheduler and clock processes.
 
     //Fork The clock
@@ -122,41 +127,60 @@ int main(int argc, char *argv[])
         }
         else if(pid_schd == 0)
         {
-            execv("./scheduler", arg2);
+            if(execv("./scheduler", arg2)==-1)
+            {
+                perror("execv failed");
+                return -1;  
+            }
         }
         else
         {
-            // 4. Use this function after creating the clock process to initialize clock.
             initClk();
             // To get time use this function. 
+            int snd_id,rcv_id;
             int x = getClk();
             printf("Current Time is %d\n", x);
             // TODO Generation Main Loop
+            struct msgbuff message;
+            char msg[256];
             
-            // 5. Create a data structure for processes and provide it with its parameters. --> DONE since we have the queue and processData
-            // 6. Send the information to the scheduler at the appropriate time.
-            while (true)
-            {
-                
-            }
-            // 7. Clear clock resources
             struct node* Current = Processes_Queue->head;
             struct node* Next;
-            while (Current != NULL)
+            while (!isempty(Processes_Queue) )
             {
-                Next = Current->next;
-                free(Current);
-                Current = Next;
+                if(Processes_Queue->head->item.arrivaltime == getClk())
+                {
+                    sprintf(msg,"%d\t%d\t%d\t%d\n",Processes_Queue->head->item.id,Processes_Queue->head->item.arrivaltime,Processes_Queue->head->item.runningtime,Processes_Queue->head->item.priority);
+                    strcpy(message.mtext,msg);
+                    snd_id=msgsnd(msg_qid,&message,sizeof(message),!IPC_NOWAIT);
+                    if (snd_id==-1)
+                    {
+                        perror("COULDNT SEND ");
+                        return 0;
+                    }
+                    Next = Current->next;
+                    dequeue(Current,Processes_Queue);
+                    free(Current);
+                    Current = Next; 
+                }
+                   
             }
-            free(Processes_Queue);
-            //fflush(stdout);
-            destroyClk(true); // put it in clear resources
+            rcv_id=msgrcv(msg_qid,&message,sizeof(message),0,!IPC_NOWAIT);
+            
+            // 5. Create a data structure for processes and provide it with its parameters.
+            // 6. Send the information to the scheduler at the appropriate time.
+            // 7. Clear clock resources
+            // put it in clear resources
         }
+// 4. Use this function after creating the clock process to initialize clock.
     }
-       
 }
 
 void clearResources(int signum)
 {
+    destroyClk(true); 
+    killpg(getpgrp(),SIGKILL);
+    kill(getpid(),SIGKILL);
+    signal(SIGINT, clearResources);
     //TODO Clears all resources in case of interruption
 }

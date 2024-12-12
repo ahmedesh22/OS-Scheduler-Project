@@ -1,14 +1,6 @@
+#pragma once
 #include "headers.h"
-struct processData
-{
-    int arrivaltime;
-    int priority;
-    int runningtime;
-    int starttime;
-    int stoptime;
-    int waittime;
-    int id;
-};
+
 
 // function to initialize a process
 void init_process(int id, int arr, int run, int pr, struct processData *process)
@@ -79,4 +71,3 @@ void print_queue(struct queue *q)
         current = current->next;
     }
 }
-

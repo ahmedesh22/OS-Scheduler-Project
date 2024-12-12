@@ -1,3 +1,4 @@
+#pragma once
 #include <stdio.h> //if you don't use scanf/printf change this include
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -11,13 +12,26 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
-
 typedef short bool;
 #define true 1
 #define false 0
 
 #define SHKEY 300
-
+struct processData
+{
+    int arrivaltime;
+    int priority;
+    int runningtime;
+    int starttime;
+    int stoptime;
+    int waittime;
+    int id;
+};
+struct msgbuff
+{
+    long mtype;
+    char mtext[256];
+};
 ///==============================
 //don't mess with this variable//
 int *shmaddr; //

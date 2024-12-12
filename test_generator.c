@@ -9,11 +9,6 @@ struct processData
     int priority;
     int runningtime;
     int id;
-    //added by us:
-    int starttime;
-    int remainingtime; //start + running - clk + waiting
-    int finishtime;
-    int waitingtime;
 };
 
 int main(int argc, char *argv[])
@@ -23,7 +18,7 @@ int main(int argc, char *argv[])
     int no;
     struct processData pData;
     printf("Please enter the number of processes you want to generate: ");
-    scanf("%d", &no); 
+    scanf("%d", &no);
     srand(time(null));
     //fprintf(pFile,"%d\n",no);
     fprintf(pFile, "#id arrival runtime priority\n");

@@ -1,14 +1,6 @@
+#pragma once
 #include "headers.h"
-struct processData
-{
-    int arrivaltime;
-    int priority;
-    int runningtime;
-    int starttime;
-    int stoptime;
-    int waittime;
-    int id;
-};
+
 struct prinode;
 struct prinode
 {
@@ -34,7 +26,7 @@ void setpriqueue(struct priqueue *queue)
     queue->head =NULL;
     queue->actualcount=0;
 }
-bool isempty(struct priqueue *queue)
+bool priisempty(struct priqueue *queue)
 {
     if(queue->actualcount ==0)
     {
@@ -42,7 +34,7 @@ bool isempty(struct priqueue *queue)
     }
     return false;
 }
-void enqueue(struct priqueue *queue,struct prinode *node)
+void prienqueue( struct priqueue *queue,struct prinode *node)
 {
     if(queue->head == NULL ||queue->head->pri > node->pri)
     {
@@ -60,9 +52,9 @@ void enqueue(struct priqueue *queue,struct prinode *node)
     current->next=node;
     queue->actualcount++;
 }
-bool dequeue(struct prinode *node,struct priqueue *queue)
+bool pridequeue(struct prinode *node,struct priqueue *queue)
 {
-    if(isempty(queue))
+    if(priisempty(queue))
     {
         return false;
     }
