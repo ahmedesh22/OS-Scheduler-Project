@@ -13,14 +13,26 @@ void init_process(int id, int arr, int run, int pr, struct processData *process)
 struct node;
 struct node
 {
+    struct PCB pcb;
     struct processData item; 
     struct node *next; 
 };
-struct queue
+typedef struct queue
 {
     struct node *head; 
     int actualcount;
-};
+} queue;
+
+void setnode(struct processData item, struct node *node)
+{
+    if(node==NULL)
+    {
+        return;
+    }
+    node->item=item;
+    node->next =NULL;
+}
+
 bool isempty(struct queue *queue)
 {
     if(queue->actualcount ==0)
@@ -42,6 +54,9 @@ bool dequeue(struct queue*queue,struct processData* data)
     queue->actualcount--;
     return true;
 }
+
+
+
 // bool Dequeue(struct queue*queue,struct node* node)
 // {
 //     if(isempty(queue))

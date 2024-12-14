@@ -17,6 +17,11 @@ typedef short bool;
 #define false 0
 
 #define SHKEY 300
+typedef enum P_state {
+  WAITING,
+  RUNNING
+} P_state ;
+
 struct processData
 {
     int arrivaltime;
@@ -26,7 +31,35 @@ struct processData
     int stoptime;
     int waittime;
     int id;
+    int pid;
+    int remainingTime;
+    P_state state;
 };
+
+
+
+typedef enum Scheduling_Algorithm
+{
+    SJF=1,
+    HPF,
+    RR,
+    MLFL
+}Scheduling_Algorithm;
+
+typedef struct PCB {
+    int arrivaltime;
+    int priority;
+    int runningtime;
+    int starttime;
+    int stoptime;
+    int waittime;
+    int id;
+    int pid;
+    int remainingTime;
+    P_state state;
+} PCB;
+
+
 struct msgbuff
 {
     long mtype;

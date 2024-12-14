@@ -90,6 +90,7 @@ int main(int argc, char *argv[])
         {
             struct processData *process = (struct processData *)malloc(sizeof(struct processData));
             init_process(id, arrival_time, run_time, priority, process);
+            process->remainingTime = run_time;
             struct node *Node = (struct node *)malloc(sizeof(struct node));
             Node->item = *process;
             Node->next = NULL;
