@@ -19,7 +19,8 @@ typedef short bool;
 #define SHKEY 300
 typedef enum P_state {
   WAITING,
-  RUNNING
+  RUNNING,
+  READY
 } P_state ;
 
 struct processData

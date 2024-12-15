@@ -7,10 +7,16 @@ int *processes_ids;
 void Shortest_Job_First(struct priqueue* pq, int index);
 int finished_processes = 0;
 void sighandler(int signum);
-void Round_Robin_Scheduling();
+void Round_Robin_Scheduling(queue* Processes_Queue);
+void Highest_Priority_First(struct priqueue* pq);
 Scheduling_Algorithm scheduling_algorithm;
 int quantum;
 int count;
+
+
+//--    For HPF Usage   --/
+int Forked_Processes = 0;
+//------------------------/
 
 
 
@@ -48,14 +54,20 @@ int main(int argc, char *argv[])
             // perror("Error in receiving the message\n");
             // exit(-1);
             int receive_value = msgrcv (msg_qid, &message, sizeof(message.process), 0, IPC_NOWAIT);
-            if (receive_value != -1 && (scheduling_algorithm == SJF || scheduling_algorithm == HPF))
+            if (receive_value != -1 && (scheduling_algorithm == SJF))
             {
-                
                 struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
                 setprinode(message.process, message.process.runningtime, Node);
                 prienqueue(Processes_PriQueue, Node);
-                printf("enqueued id: %d\n", Processes_PriQueue->head->process.id);
-
+                printf("enqueued id: %d\n", Node->process.id);
+            }
+            else if (receive_value != -1 && (scheduling_algorithm == HPF))
+            {
+                struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
+                setprinode(message.process, message.process.priority, Node);
+                prienqueue(Processes_PriQueue, Node);
+                printf("enqueued id: %d\n", Node->process.id);
+                count--;
             }
             else if (receive_value != -1 && scheduling_algorithm == RR)
             {
@@ -73,13 +85,13 @@ int main(int argc, char *argv[])
         }
 
         // After receiving put the process sent in the queue/priqueue.
+        
         switch (scheduling_algorithm){
             case SJF: if (Processes_PriQueue->actualcount > 0)
             {
-                
                 Shortest_Job_First(Processes_PriQueue, i);
                 pridequeue(&Processes_PriQueue->head->process, Processes_PriQueue);
-                printf("Process %d with the following arrival time received successfully: %d \n",message.process.id,message.process.arrivaltime);
+                //printf("Process %d with the following arrival time received successfully: %d \n",message.process.id,message.process.arrivaltime);
                 i++;
                 count--;
             }
@@ -90,16 +102,22 @@ int main(int argc, char *argv[])
                 Round_Robin_Scheduling(Processes_Queue);
             }   
             break;  
+            case HPF: if (Processes_PriQueue->actualcount > 0)
+            {
+                //printf("this is the count of the priqueue %d \n",count);
+                Highest_Priority_First(Processes_PriQueue);
+            }
+            //printf("ana hna\n");
+            break;
             default: break;
         }   
         //add rest of cases here
 
         
     }
-    char msg[265]="I am done" ;
-
+    //printf("I am done") ;
     while(finished_processes != atoi(argv[3])){
-
+        //printf("fp\n");
     }
     //int snd_id=msgsnd(msg_qid,&msg,sizeof(msg),!IPC_NOWAIT);
 
@@ -145,7 +163,7 @@ void Shortest_Job_First(struct priqueue* pq, int index)
         char *arg[] = {"./process.out", id, arr, run, pri, NULL};
         if(execv("./process.out", arg) == -1)
         {
-            perror("DAH SOOOOT\n");
+            perror("Error in Execv\n");
             exit(-10);
         }
     }
@@ -197,7 +215,8 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
                 free(current_process);
                 current_process = NULL;
                 finished_processes++;
-            } else {
+            } 
+            else {
                 printf("Process %d preempted (remaining time: %d).\n",
                        current_process->id, current_process->remainingTime);
                 kill(current_process->pid, SIGSTOP);
@@ -212,6 +231,166 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
             last_time = current_time; // Update last_time after handling current process
         }
     }
+}
+
+
+void Highest_Priority_First(struct priqueue* pq)
+{
+    //Dequeue and get the head process
+    //printf("ana gowa\n");
+    static struct processData* current_process = NULL;
+    static int last_time = -1;
+    int current_time = getClk();
+
+    if (!current_process && pq->actualcount > 0)
+    {
+        current_process = (struct processData*) malloc(sizeof(struct processData));
+        pridequeue(current_process, pq);
+
+        current_process->state = RUNNING;
+        current_process->starttime = current_time;
+        printf("Starting process %d (runtime: %d, start time: %d)\n",
+        current_process->id, current_process->runningtime, current_process->starttime);
+
+        current_process->pid = fork();
+        if (current_process->pid == -1)
+        {
+            perror("Error While Forking.\n");
+            exit(-4);
+        }
+        else if (current_process->pid == 0) //Child Process
+        {
+            char id[10];
+            sprintf(id, "%d", current_process->id);
+            char arr[10];
+            sprintf(arr, "%d", current_process->arrivaltime);
+            char run[10];
+            sprintf(run, "%d", current_process->runningtime);
+            char pri[10];
+            sprintf(pri, "%d", current_process->priority);
+            char *arg[] = {"./process.out",id, arr, run, pri, NULL};
+
+            execv("./process.out", arg);
+            perror("Error in execv.\n");
+            exit(-3);
+        }
+        last_time = current_time; // This is the last time a process started
+        
+    }
+
+    else if (current_process)
+    {
+        // Check the current_process with the head of the queue to see if the new process has a higher priority
+        current_process->remainingTime -= (current_time - last_time);
+        if (current_process->remainingTime <= 0)
+        {
+            printf("Process %d Finished at time %d.\n", current_process->id, getClk() + current_process->remainingTime);
+            free(current_process);
+            if(pridequeue(current_process, pq)==false)
+            {
+                current_process=NULL;
+                return;
+            }
+            if(current_process->state == WAITING)
+            {
+                current_process->state = RUNNING;
+                printf("Process %d continued at time %d.\n", current_process->id, getClk());
+                kill(current_process->pid, SIGCONT);
+            }
+            else
+            {
+                printf("Process %d Started at time %d.\n", current_process->id, getClk());
+                        
+                current_process->pid = fork();
+                if (current_process->pid == -1)
+                {
+                    perror("Error While Forking.\n");
+                    exit(-4);
+                }
+                else if (current_process->pid == 0) //Child Process
+                {
+                    char id[10];
+                    sprintf(id, "%d", current_process->id);
+                    char arr[10];
+                    sprintf(arr, "%d", current_process->arrivaltime);
+                    char run[10];
+                    sprintf(run, "%d", current_process->runningtime);
+                    char pri[10];
+                    sprintf(pri, "%d", current_process->priority);
+                    char *arg[] = {"./process.out",id, arr, run, pri, NULL};
+
+                    execv("./process.out", arg);
+                    perror("Error in execv.\n");
+                    exit(-3);
+                }
+                last_time = current_time; // This is the last time a process started   
+            }
+        }
+        else if (pq->head->pri < current_process->priority)
+        {
+            // Need to preempt the current_process and start the new process
+            
+            //Stop the running process
+            printf("Process %d preempted (remaining time: %d).\n",
+            current_process->id, current_process->remainingTime);
+            current_process->state = WAITING;
+            kill(current_process->pid, SIGSTOP);
+            
+            struct prinode* new_node = (struct prinode*)malloc(sizeof(struct prinode));
+            setprinode(*current_process, current_process->priority, new_node);
+            prienqueue(pq, new_node);
+            free(current_process);
+            pridequeue(current_process, pq);
+            printf("id : %d state : %d running-time %d\n",current_process->id,current_process->state,current_process->remainingTime);
+            if(current_process->state == WAITING)
+            {
+                current_process->state = RUNNING;
+                printf("Process %d continued at time %d.\n", current_process->id, getClk());
+                kill(current_process->pid, SIGCONT);
+            }
+            else
+            {
+                printf("Process %d Started at time %d.\n", current_process->id, getClk());
+                        
+                current_process->pid = fork();
+                if (current_process->pid == -1)
+                {
+                    perror("Error While Forking.\n");
+                    exit(-4);
+                }
+                else if (current_process->pid == 0) //Child Process
+                {
+                    char id[10];
+                    sprintf(id, "%d", current_process->id);
+                    char arr[10];
+                    sprintf(arr, "%d", current_process->arrivaltime);
+                    char run[10];
+                    sprintf(run, "%d", current_process->runningtime);
+                    char pri[10];
+                    sprintf(pri, "%d", current_process->priority);
+                    char *arg[] = {"./process.out",id, arr, run, pri, NULL};
+
+                    execv("./process.out", arg);
+                    perror("Error in execv.\n");
+                    exit(-3);
+                }
+            }
+            // Fork Or SIGCONT
+            last_time = current_time;
+        }
+
+        // Else do nothing since the running process is of already higher priority
+    }
+
+    
+    
+    // Parent
+    // The parent should constantly look up for any changes in the priqueue 
+    // (if the head of the priqueue has a higher priority than the running process) 
+    // then we should preempt (SIGSTOP) the running process and fork this new process
+    // Then after this process finishes we should check whether we will SIGCONT the stopped
+    // process or fork another process
+
 }
 
 

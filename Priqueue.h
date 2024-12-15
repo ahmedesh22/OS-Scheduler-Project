@@ -18,6 +18,8 @@ void setprinode(struct processData item,int priority,struct prinode *node)
     node->process=item;
     node->pri=priority;
     node->next =NULL;
+    node->process.state=READY;
+    
 }
 struct priqueue
 {
