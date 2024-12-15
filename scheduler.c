@@ -116,6 +116,10 @@ int main(int argc, char *argv[])
         
     }
     //printf("I am done") ;
+    while((Processes_PriQueue->actualcount)!=0 && scheduling_algorithm==HPF)
+    {
+        Highest_Priority_First(Processes_PriQueue);
+    }
     while(finished_processes != atoi(argv[3])){
         //printf("fp\n");
     }
@@ -265,7 +269,7 @@ void Highest_Priority_First(struct priqueue* pq)
             char arr[10];
             sprintf(arr, "%d", current_process->arrivaltime);
             char run[10];
-            sprintf(run, "%d", current_process->runningtime);
+            sprintf(run, "%d", current_process->remainingTime);
             char pri[10];
             sprintf(pri, "%d", current_process->priority);
             char *arg[] = {"./process.out",id, arr, run, pri, NULL};
@@ -314,7 +318,7 @@ void Highest_Priority_First(struct priqueue* pq)
                     char arr[10];
                     sprintf(arr, "%d", current_process->arrivaltime);
                     char run[10];
-                    sprintf(run, "%d", current_process->runningtime);
+                    sprintf(run, "%d", current_process->remainingTime);
                     char pri[10];
                     sprintf(pri, "%d", current_process->priority);
                     char *arg[] = {"./process.out",id, arr, run, pri, NULL};
@@ -335,7 +339,7 @@ void Highest_Priority_First(struct priqueue* pq)
             current_process->id, current_process->remainingTime);
             current_process->state = WAITING;
             kill(current_process->pid, SIGSTOP);
-            
+            last_time=current_time;
             struct prinode* new_node = (struct prinode*)malloc(sizeof(struct prinode));
             setprinode(*current_process, current_process->priority, new_node);
             prienqueue(pq, new_node);
@@ -365,7 +369,7 @@ void Highest_Priority_First(struct priqueue* pq)
                     char arr[10];
                     sprintf(arr, "%d", current_process->arrivaltime);
                     char run[10];
-                    sprintf(run, "%d", current_process->runningtime);
+                    sprintf(run, "%d", current_process->remainingTime);
                     char pri[10];
                     sprintf(pri, "%d", current_process->priority);
                     char *arg[] = {"./process.out",id, arr, run, pri, NULL};
@@ -382,7 +386,7 @@ void Highest_Priority_First(struct priqueue* pq)
         // Else do nothing since the running process is of already higher priority
     }
 
-    
+    last_time=current_time;
     
     // Parent
     // The parent should constantly look up for any changes in the priqueue 
