@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
                 count--;
             }
             break;
-            case RR: if (Processes_Queue->actualcount > 0)
+            case RR: if (1)
             {
                 
                 Round_Robin_Scheduling(Processes_Queue);
@@ -120,8 +120,13 @@ int main(int argc, char *argv[])
     {
         Highest_Priority_First(Processes_PriQueue);
     }
+
+    while((Processes_Queue->actualcount)!=0 && scheduling_algorithm==RR)
+    {
+        Round_Robin_Scheduling(Processes_Queue);
+    }
     while(finished_processes != atoi(argv[3])){
-        //printf("fp\n");
+       // printf("fp %d \n",finished_processes);
     }
     //int snd_id=msgsnd(msg_qid,&msg,sizeof(msg),!IPC_NOWAIT);
 
@@ -174,68 +179,88 @@ void Shortest_Job_First(struct priqueue* pq, int index)
 }
 
 void Round_Robin_Scheduling(queue* Processes_Queue)
-{        
+{
     static struct processData* current_process = NULL;
     static int last_time = -1;
-
     int current_time = getClk();
-
+ 
+    // Check if a new process needs to be scheduled
     if (!current_process && Processes_Queue->actualcount > 0) {
         current_process = (struct processData*)malloc(sizeof(struct processData));
         dequeue(Processes_Queue, current_process);
+        last_time = current_time;
 
-        current_process->state = RUNNING;
-        current_process->starttime = current_time;
-        printf("Starting process %d (runtime: %d, start time: %d)\n",
-               current_process->id, current_process->runningtime, current_process->starttime);
-
-        current_process->pid = fork();
-        if (current_process->pid == 0) {
-            char id[10], arr[10], rem[10], pri[10];
-            sprintf(id, "%d", current_process->id);
-            sprintf(arr, "%d", current_process->arrivaltime);
-            if(current_process->remainingTime >= quantum)
-            sprintf(rem, "%d", quantum);
+        current_process->starttime = (current_process->starttime == -1) ? current_time : current_process->starttime;
+         if(current_process->state == WAITING)
+            {
+                current_process->state = RUNNING;
+                printf("Process %d continued at time %d and its remaining time is %d.\n", current_process->id, getClk(), current_process->remainingTime);
+                kill(current_process->pid, SIGCONT);
+            }
             else
-            sprintf(rem, "%d", current_process->remainingTime);
-            current_process->remainingTime = current_process->remainingTime - quantum;
-            char* args[] = {"./process.out", id, arr, rem, 0, NULL};
-            execv("./process.out", args);
-            perror("Exec failed");
-            exit(1);
-        }
+            {
+                printf("Process %d Started at time %d and its run time is %d.\n", current_process->id, getClk(),current_process->runningtime);
+                current_process->state = RUNNING;
+                current_process->pid = fork();
+                if (current_process->pid == 0) {
+                    // Prepare arguments for execv
+                    char id[10], arr[10], rem[10],quant[10],scAlgo[10];
+                    sprintf(id, "%d", current_process->id);
+                    sprintf(arr, "%d", current_process->arrivaltime);
+                    //sprintf(rem, "%d", current_process->remainingTime >= quantum ? quantum : current_process->remainingTime);
+                    sprintf(rem, "%d", current_process->remainingTime);
+                    sprintf(quant, "%d", quantum);
+                    sprintf(scAlgo, "%d", scheduling_algorithm);
 
-        last_time = current_time; // Update last_time when a new process starts
+                    char* args[] = {"./process.out", id, arr, rem, quant ,scAlgo, NULL};
+                    last_time = current_time;
+                    execv("./process.out", args);
+                    perror("Exec failed");
+                    exit(1);
+                }
+            }
+        last_time = current_time;
     }
 
+    // Handle the running process
     if (current_process) {
-        if ((current_time - last_time) >= quantum || current_process->remainingTime <= 0) {
-            current_process->remainingTime -= (current_time - last_time);   
-
+        // Check if the quantum has expired or process finished
+        if ((current_time - last_time) >= quantum || (current_time - last_time) >= current_process->remainingTime  || current_process->remainingTime <= 0) {
+            current_process->remainingTime -= (current_time - last_time);
+            printf("dasda%d\n",current_time - last_time);
             if (current_process->remainingTime <= 0) {
-                printf("Process %d finished execution.\n", current_process->id);
-                count--;
+                // Process finished
+                printf("Process %d finished execution. at time : %d\n", current_process->id, getClk());
                 kill(current_process->pid, SIGKILL);
                 free(current_process);
                 current_process = NULL;
-                finished_processes++;
-            } 
-            else {
-                printf("Process %d preempted (remaining time: %d).\n",
-                       current_process->id, current_process->remainingTime);
+                count--;
+            } else {
+                // Preempt the current process;
+                printf("last time : %d   ", last_time);
+                printf("Process %d preempted at time : %d   (remaining time: %d).\n",
+                     current_process->id, current_time, current_process->remainingTime);
                 kill(current_process->pid, SIGSTOP);
-
+                if(Processes_Queue->actualcount == 0){
+                current_time=getClk();
+                last_time = current_time;
+                kill(current_process->pid, SIGCONT);
+                }
+                // Re-enqueue the process
                 struct node* new_node = (struct node*)malloc(sizeof(struct node));
                 setnode(*current_process, new_node);
+                new_node->item.state = WAITING;
                 enqueue(new_node, Processes_Queue);
+
                 free(current_process);
                 current_process = NULL;
             }
-
-            last_time = current_time; // Update last_time after handling current process
+            last_time = current_time; // Update last_time for the next process
         }
+    current_time=getClk();
     }
 }
+
 
 
 void Highest_Priority_First(struct priqueue* pq)
