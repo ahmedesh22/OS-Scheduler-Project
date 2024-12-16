@@ -8,12 +8,10 @@ void Shortest_Job_First(struct priqueue* pq, int index);
 int finished_processes = 0;
 void sighandler(int signum);
 void Round_Robin_Scheduling(queue* Processes_Queue);
-void Highest_Priority_First(struct priqueue* pq);
+int Highest_Priority_First(struct priqueue* pq);
 Scheduling_Algorithm scheduling_algorithm;
 int quantum;
 int count;
-
-
 //--    For HPF Usage   --/
 int Forked_Processes = 0;
 //------------------------/
@@ -31,7 +29,13 @@ int main(int argc, char *argv[])
     scheduling_algorithm=atoi(argv[1]);
     quantum=atoi(argv[2]);
     count=atoi(argv[3]);
-
+    file = fopen("scheduler.log", "w");
+    if (file == NULL)
+    {
+        perror("Error, Cannot Open File\n");
+        return -3;
+    }
+    fprintf(file, "#At time x process y state arr w total z remain y wait k\n");
     struct queue* Processes_Queue = (struct queue* ) malloc(sizeof(struct queue));
     Processes_Queue->actualcount = 0;
     Processes_Queue->head = NULL;
@@ -57,16 +61,16 @@ int main(int argc, char *argv[])
             if (receive_value != -1 && (scheduling_algorithm == SJF))
             {
                 struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
-                setprinode(message.process, message.process.runningtime, Node);
+                setprinode(message.process, message.process.runningtime, READY,Node);
                 prienqueue(Processes_PriQueue, Node);
                 printf("enqueued id: %d\n", Node->process.id);
             }
             else if (receive_value != -1 && (scheduling_algorithm == HPF))
             {
                 struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
-                setprinode(message.process, message.process.priority, Node);
+                setprinode(message.process, message.process.priority, READY,Node);
                 prienqueue(Processes_PriQueue, Node);
-                printf("enqueued id: %d\n", Node->process.id);
+                //printf("enqueued id: %d\n", Node->process.id);
                 count--;
             }
             else if (receive_value != -1 && scheduling_algorithm == RR)
@@ -115,10 +119,25 @@ int main(int argc, char *argv[])
 
         
     }
+    count=atoi(argv[3]);
     //printf("I am done") ;
-    while((Processes_PriQueue->actualcount)!=0 && scheduling_algorithm==HPF)
+    while((Processes_PriQueue->actualcount)>=0 && scheduling_algorithm==HPF)
     {
-        Highest_Priority_First(Processes_PriQueue);
+        // if(Processes_PriQueue->actualcount==0 && count-finished_processes==1)
+        // {
+        //     printf("I am done") ;
+        //     Highest_Priority_First(Processes_PriQueue);
+        //     break;
+        // }
+        // Highest_Priority_First(Processes_PriQueue);
+        if(Highest_Priority_First(Processes_PriQueue)==1)
+        {
+            break;
+        }
+    }
+    while((Processes_PriQueue->actualcount)!=0 && scheduling_algorithm==RR)
+    {
+        Round_Robin_Scheduling(Processes_Queue);
     }
     while(finished_processes != atoi(argv[3])){
         //printf("fp\n");
@@ -128,6 +147,7 @@ int main(int argc, char *argv[])
     free(Processes_Queue);
     free(Processes_PriQueue);
     free(processes_ids);
+    fclose(file);
     destroyClk(true);
 }
 
@@ -222,7 +242,7 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
             } 
             else {
                 printf("Process %d preempted (remaining time: %d).\n",
-                       current_process->id, current_process->remainingTime);
+                current_process->id, current_process->remainingTime);
                 kill(current_process->pid, SIGSTOP);
 
                 struct node* new_node = (struct node*)malloc(sizeof(struct node));
@@ -235,10 +255,11 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
             last_time = current_time; // Update last_time after handling current process
         }
     }
+    last_time=current_time;
 }
 
 
-void Highest_Priority_First(struct priqueue* pq)
+int Highest_Priority_First(struct priqueue* pq)
 {
     //Dequeue and get the head process
     //printf("ana gowa\n");
@@ -255,6 +276,8 @@ void Highest_Priority_First(struct priqueue* pq)
         current_process->starttime = current_time;
         printf("Starting process %d (runtime: %d, start time: %d)\n",
         current_process->id, current_process->runningtime, current_process->starttime);
+        current_process->waittime=getClk()-current_process->arrivaltime;
+        write_output_file(current_process,0);
 
         current_process->pid = fork();
         if (current_process->pid == -1)
@@ -282,28 +305,30 @@ void Highest_Priority_First(struct priqueue* pq)
         
     }
 
-    else if (current_process)
+    else if (current_process && pq->actualcount > 0)
     {
         // Check the current_process with the head of the queue to see if the new process has a higher priority
         current_process->remainingTime -= (current_time - last_time);
         if (current_process->remainingTime <= 0)
         {
             printf("Process %d Finished at time %d.\n", current_process->id, getClk() + current_process->remainingTime);
+            finished_processes++;
+            write_output_file(current_process,1);
             free(current_process);
-            if(pridequeue(current_process, pq)==false)
-            {
-                current_process=NULL;
-                return;
-            }
+            pridequeue(current_process, pq);            
             if(current_process->state == WAITING)
             {
                 current_process->state = RUNNING;
-                printf("Process %d continued at time %d.\n", current_process->id, getClk());
+                printf("Process %d continued at time %d with remaining time %d\n", current_process->id, getClk(),current_process->remainingTime);
+                current_process->waittime += getClk()-current_process->stoptime;
+                write_output_file(current_process,3);
                 kill(current_process->pid, SIGCONT);
             }
             else
             {
                 printf("Process %d Started at time %d.\n", current_process->id, getClk());
+                current_process->waittime=getClk()-current_process->arrivaltime;
+                write_output_file(current_process,0);
                         
                 current_process->pid = fork();
                 if (current_process->pid == -1)
@@ -338,23 +363,29 @@ void Highest_Priority_First(struct priqueue* pq)
             printf("Process %d preempted (remaining time: %d).\n",
             current_process->id, current_process->remainingTime);
             current_process->state = WAITING;
+            current_process->stoptime=getClk();
+            write_output_file(current_process,2);
             kill(current_process->pid, SIGSTOP);
             last_time=current_time;
             struct prinode* new_node = (struct prinode*)malloc(sizeof(struct prinode));
-            setprinode(*current_process, current_process->priority, new_node);
+            setprinode(*current_process, current_process->priority, WAITING,new_node);
             prienqueue(pq, new_node);
             free(current_process);
             pridequeue(current_process, pq);
-            printf("id : %d state : %d running-time %d\n",current_process->id,current_process->state,current_process->remainingTime);
+            //printf("id : %d state : %d running-time %d\n",current_process->id,current_process->state,current_process->remainingTime);
             if(current_process->state == WAITING)
             {
                 current_process->state = RUNNING;
                 printf("Process %d continued at time %d.\n", current_process->id, getClk());
+                current_process->waittime += getClk()-current_process->stoptime;
+                write_output_file(current_process,3);
                 kill(current_process->pid, SIGCONT);
             }
             else
             {
                 printf("Process %d Started at time %d.\n", current_process->id, getClk());
+                current_process->waittime=getClk()-current_process->arrivaltime;
+                write_output_file(current_process,0);
                         
                 current_process->pid = fork();
                 if (current_process->pid == -1)
@@ -385,8 +416,24 @@ void Highest_Priority_First(struct priqueue* pq)
 
         // Else do nothing since the running process is of already higher priority
     }
-
+    else if(pq->actualcount ==0 && count-finished_processes==1)
+    {
+        current_process->remainingTime -= (current_time - last_time);
+        if(current_process->remainingTime<=0)
+        {
+            printf("Process %d Finished at time %d.\n", current_process->id, getClk() + current_process->remainingTime); 
+            write_output_file(current_process,1);
+            finished_processes++;  
+            return 1;
+        }
+        
+    }
+    else
+    {
+        current_process->remainingTime -= (current_time - last_time);   
+    }
     last_time=current_time;
+    return 0;
     
     // Parent
     // The parent should constantly look up for any changes in the priqueue 
@@ -400,6 +447,6 @@ void Highest_Priority_First(struct priqueue* pq)
 
 void sighandler(int signum)
 {
-    finished_processes++;
+    //finished_processes++;
     signal(SIGUSR1, sighandler);
 }

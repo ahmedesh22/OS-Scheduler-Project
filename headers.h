@@ -15,8 +15,9 @@
 typedef short bool;
 #define true 1
 #define false 0
-
+FILE *file;
 #define SHKEY 300
+
 typedef enum P_state {
   WAITING,
   RUNNING,
@@ -108,5 +109,28 @@ void destroyClk(bool terminateAll)
     if (terminateAll)
     {
         killpg(getpgrp(), SIGINT);
+    }
+}
+void write_output_file(struct processData* pd, int state) // States are Started (0), Finished(1), Stopped(2), Resumed(3) 
+{
+    if (state == 0) // Started
+    {
+        fprintf(file, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), 
+        pd->id, pd->arrivaltime, pd->runningtime, pd->remainingTime, pd->waittime);
+    }
+    else if (state == 1) // Finsihed
+    {
+        fprintf(file, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f\n", getClk(), 
+        pd->id, pd->arrivaltime, pd->runningtime, pd->remainingTime, pd->waittime, getClk() - pd->arrivaltime, (float) (getClk() - pd->arrivaltime) / pd->runningtime);
+    }
+    else if (state == 2) // Stopped
+    {
+        fprintf(file, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), 
+        pd->id, pd->arrivaltime, pd->runningtime, pd->remainingTime, pd->waittime);
+    }
+    else if (state == 3) // Resumed
+    {
+        fprintf(file, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), 
+        pd->id, pd->arrivaltime, pd->runningtime, pd->remainingTime, pd->waittime);
     }
 }

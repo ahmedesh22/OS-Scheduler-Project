@@ -9,7 +9,7 @@ struct prinode
     struct prinode * next;
 
 };
-void setprinode(struct processData item,int priority,struct prinode *node)
+void setprinode(struct processData item,int priority,P_state state,struct prinode *node)
 {
     if(node==NULL)
     {
@@ -18,7 +18,7 @@ void setprinode(struct processData item,int priority,struct prinode *node)
     node->process=item;
     node->pri=priority;
     node->next =NULL;
-    node->process.state=READY;
+    node->process.state=state;
     
 }
 struct priqueue
@@ -62,7 +62,7 @@ void prienqueue( struct priqueue *queue,struct prinode *node)
         queue->head = node;
         queue->head->process = node->process;
         queue->head->pri = node->pri;
-        //setprinode(queue->head->process, queue->head->pri, node);
+        
         queue->actualcount++;
         return;
     }
@@ -72,8 +72,6 @@ void prienqueue( struct priqueue *queue,struct prinode *node)
         current=current->next;
     }
     node->next=current->next;
-    
-    //setprinode()
     current->next=node;
     queue->actualcount++;
 }
