@@ -77,7 +77,24 @@ int main(int argc, char *argv[])
             {
                 struct node* new_node = (struct node*)malloc(sizeof(struct node));
                 setnode(message.process, new_node);
+                if(Processes_Queue->actualcount > 0){
+                struct node* last_node = (struct node*)malloc(sizeof(struct node));
+                struct processData* current_process = NULL;
+                current_process = (struct processData*)malloc(sizeof(struct processData));
+                dequeue_from_back(Processes_Queue, current_process);
+                setnode(*current_process, last_node);
+                if(current_process->stoptime == getClk()){
                 enqueue(new_node, Processes_Queue);
+                enqueue(last_node, Processes_Queue);
+                printf("Process %d preempted (remaining time: %d).\n",
+                current_process->id, current_process->remainingTime);
+                write_output_file(current_process, 2);
+                }else{
+                enqueue(last_node, Processes_Queue);
+                enqueue(new_node, Processes_Queue);}
+                }else{
+                enqueue(new_node, Processes_Queue);
+                }
                 printf("Process %d enqueued (arrival: %d, runtime: %d)\n",
                 message.process.id, message.process.arrivaltime, message.process.runningtime);
             }
@@ -196,8 +213,10 @@ void Shortest_Job_First(struct priqueue* pq, int index)
     else
     {
         //printf("Process with id %d started at time %d\n", current_process->id, getClk());
+        current_process->starttime = getClk();
         write_output_file(current_process, 0);
         waitpid(current_process->pid, &statloc, 0);
+        current_process->remainingTime = current_process->runningtime - (getClk() - current_process->starttime);
         write_output_file(current_process, 1);
         //printf("Process with id %d finished at time %d\n", current_process->id, getClk());
     }
@@ -220,9 +239,16 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
          if(current_process->state == WAITING)
             {
                 current_process->state = RUNNING;
-                printf("Process %d continued at time %d and its remaining time is %d.\n", current_process->id, getClk(), current_process->remainingTime);
+                if(current_process->stoptime != getClk()){
+                    printf("Process %d continued at time %d and its remaining time is %d.\n", current_process->id, getClk(), current_process->remainingTime);
+                    write_output_file(current_process, 3);
+                }
+                else{
+                    printf("Process %d still have the cpu for another quantum at time %d and its remaining time is %d.\n", current_process->id, getClk(), current_process->remainingTime);
+                    write_output_file(current_process, 4);
+                }
                 current_process->waittime += getClk() - current_process->stoptime;
-                write_output_file(current_process, 3);
+                
                 kill(current_process->pid, SIGCONT);
             }
             else
@@ -277,8 +303,8 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
                 }
              
             else {
-                printf("Process %d preempted (remaining time: %d).\n",
-                current_process->id, current_process->remainingTime);
+                printf("Process %d preempted at time %d (remaining time: %d).\n",
+                current_process->id, getClk() , current_process->remainingTime);
                 current_process->stoptime = getClk();
                 write_output_file(current_process, 2);
                 kill(current_process->pid, SIGSTOP);

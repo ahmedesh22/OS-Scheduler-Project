@@ -48,18 +48,7 @@ typedef enum Scheduling_Algorithm
     MLFL
 }Scheduling_Algorithm;
 
-typedef struct PCB {
-    int arrivaltime;
-    int priority;
-    int runningtime;
-    int starttime;
-    int stoptime;
-    int waittime;
-    int id;
-    int pid;
-    int remainingTime;
-    P_state state;
-} PCB;
+
 
 
 struct msgbuff
@@ -132,5 +121,10 @@ void write_output_file(struct processData* pd, int state) // States are Started 
     {
         fprintf(file, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), 
         pd->id, pd->arrivaltime, pd->runningtime, pd->remainingTime, pd->waittime);
+    }
+    else if (state == 4) // still having cpu for another quantum in RR
+    {
+        fprintf(file, "At time %d process %d still having the cpu  remain %d wait %d\n", getClk(), 
+        pd->id, pd->remainingTime, pd->waittime);
     }
 }

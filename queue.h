@@ -13,7 +13,6 @@ void init_process(int id, int arr, int run, int pr, struct processData *process)
 struct node;
 struct node
 {
-    struct PCB pcb;
     struct processData item; 
     struct node *next; 
 };
@@ -56,21 +55,6 @@ bool dequeue(struct queue*queue,struct processData* data)
 }
 
 
-
-// bool Dequeue(struct queue*queue,struct node* node)
-// {
-//     if(isempty(queue))
-//     {
-//         return false;
-//     }
-//     struct node * deleteptr =queue->head;
-//     node->item=queue->head->item;
-//     queue->head = queue->head->next;
-//     free(deleteptr);
-//     queue->actualcount--;
-//     return true;
-// }
-
 void enqueue(struct node *node,struct queue *queue)
 {
     if(queue->head==NULL)
@@ -101,4 +85,38 @@ void print_queue(struct queue *q)
         printf("%d\n", current->item.arrivaltime);
         current = current->next;
     }
+}
+
+
+bool dequeue_from_back(struct queue *queue, struct processData *data)
+{
+    if (isempty(queue))
+    {
+        return false;
+    }
+
+    // If there is only one node
+    if (queue->head->next == NULL)
+    {
+        *data = queue->head->item;
+        free(queue->head);
+        queue->head = NULL;
+        queue->actualcount--;
+        return true;
+    }
+
+    // Traverse to the second last node
+    struct node *current = queue->head;
+    while (current->next->next != NULL)
+    {
+        current = current->next;
+    }
+
+    // Remove the last node
+    struct node *deleteptr = current->next;
+    *data = deleteptr->item;
+    current->next = NULL;
+    free(deleteptr);
+    queue->actualcount--;
+    return true;
 }
