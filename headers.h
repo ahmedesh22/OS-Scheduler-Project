@@ -139,7 +139,7 @@ void write_output_file(struct processData* pd, int state) // States are Started 
 }
 void write_performance_file(int count)
 {
-    fprintf(file2,"CPU utilization = %.0f%%\n",((float)(total_run/lastfinish))*100);
+    fprintf(file2,"CPU utilization = %.2f%%\n",((float)(total_run/lastfinish)*100));
     fprintf(file2,"Avg WTA = %.2f\n",(float)(total_WTA/count));
     fprintf(file2,"Avg Waiting = %.2f\n",(float)(total_wait/count));
 }
