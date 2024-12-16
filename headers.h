@@ -16,6 +16,11 @@ typedef short bool;
 #define true 1
 #define false 0
 FILE *file;
+FILE *file2;
+float total_run=0;
+float total_wait=0;
+float total_WTA=0;
+float lastfinish=0;
 #define SHKEY 300
 
 typedef enum P_state {
@@ -109,6 +114,10 @@ void write_output_file(struct processData* pd, int state) // States are Started 
     }
     else if (state == 1) // Finsihed
     {
+        lastfinish=getClk();
+        total_run+=pd->runningtime;
+        total_wait+=pd->waittime;
+        total_WTA+=(float)(getClk() - pd->arrivaltime) / pd->runningtime;
         fprintf(file, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f\n", getClk(), 
         pd->id, pd->arrivaltime, pd->runningtime, pd->remainingTime, pd->waittime, getClk() - pd->arrivaltime, (float) (getClk() - pd->arrivaltime) / pd->runningtime);
     }
@@ -127,4 +136,10 @@ void write_output_file(struct processData* pd, int state) // States are Started 
         fprintf(file, "At time %d process %d still having the cpu  remain %d wait %d\n", getClk(), 
         pd->id, pd->remainingTime, pd->waittime);
     }
+}
+void write_performance_file(int count)
+{
+    fprintf(file2,"CPU utilization = %.0f%%\n",((float)(total_run/lastfinish))*100);
+    fprintf(file2,"Avg WTA = %.2f\n",(float)(total_WTA/count));
+    fprintf(file2,"Avg Waiting = %.2f\n",(float)(total_wait/count));
 }
