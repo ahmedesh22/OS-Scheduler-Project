@@ -227,24 +227,25 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
         // Check if the quantum has expired or process finished
         if ((current_time - last_time) >= quantum || (current_time - last_time) >= current_process->remainingTime  || current_process->remainingTime <= 0) {
             current_process->remainingTime -= (current_time - last_time);
-            printf("dasda%d\n",current_time - last_time);
             if (current_process->remainingTime <= 0) {
                 // Process finished
                 printf("Process %d finished execution. at time : %d\n", current_process->id, getClk());
+                finished_processes++;
+                count--;
                 kill(current_process->pid, SIGKILL);
                 free(current_process);
                 current_process = NULL;
-                count--;
+
             } else {
-                // Preempt the current process;
-                printf("last time : %d   ", last_time);
-                printf("Process %d preempted at time : %d   (remaining time: %d).\n",
-                     current_process->id, current_time, current_process->remainingTime);
-                kill(current_process->pid, SIGSTOP);
                 if(Processes_Queue->actualcount == 0){
                 current_time=getClk();
                 last_time = current_time;
                 kill(current_process->pid, SIGCONT);
+                }else{
+                // Preempt the current process;
+                printf("Process %d preempted at time : %d   (remaining time: %d).\n",
+                     current_process->id, current_time, current_process->remainingTime);
+                kill(current_process->pid, SIGSTOP);
                 }
                 // Re-enqueue the process
                 struct node* new_node = (struct node*)malloc(sizeof(struct node));
@@ -425,6 +426,6 @@ void Highest_Priority_First(struct priqueue* pq)
 
 void sighandler(int signum)
 {
-    finished_processes++;
+    //finished_processes++;
     signal(SIGUSR1, sighandler);
 }
