@@ -135,11 +135,6 @@ int main(int argc, char *argv[])
             break;
         }
     }
-    while((Processes_PriQueue->actualcount)!=0 && scheduling_algorithm==RR)
-    {
-        Round_Robin_Scheduling(Processes_Queue);
-    }
-
     while((Processes_Queue->actualcount)!=0 && scheduling_algorithm==RR)
     {
         Round_Robin_Scheduling(Processes_Queue);
@@ -163,8 +158,8 @@ void Shortest_Job_First(struct priqueue* pq, int index)
     // fork
     // child execute process file
     
-    struct processData* pd;
-    pd = &pq->head->process;
+    struct processData* current_process;
+    current_process = &pq->head->process;
     int statloc;
     int ppid = getpid();
     //pridequeue(pd, pq);
@@ -173,22 +168,24 @@ void Shortest_Job_First(struct priqueue* pq, int index)
     // {
     //     waitpid(processes_ids[index - 1], &statloc, 0);
     // }
-    processes_ids[index] = fork();
-    waitpid(processes_ids[index], &statloc, 0);
-    if (processes_ids[index] == -1)
+    current_process->waittime = getClk() - current_process->arrivaltime;
+    current_process->pid = fork();
+    // waitpid(processes_ids[index], &statloc, 0);
+    if (current_process->pid == -1)
     {
         perror("Error While Forking.\n");
+        exit(-10);
     }
-    else if (processes_ids[index] == 0 && getppid() == ppid) // Child
+    else if (current_process->pid == 0 && getppid() == ppid) // Child
     {
         char id[10];
-        sprintf(id, "%d", pd->id);
+        sprintf(id, "%d", current_process->id);
         char arr[10];
-        sprintf(arr, "%d", pd->arrivaltime);
+        sprintf(arr, "%d", current_process->arrivaltime);
         char run[10];
-        sprintf(run, "%d", pd->runningtime);
+        sprintf(run, "%d", current_process->runningtime);
         char pri[10];
-        sprintf(pri, "%d", pd->priority);
+        sprintf(pri, "%d", current_process->priority);
         char *arg[] = {"./process.out", id, arr, run, pri, NULL};
         if(execv("./process.out", arg) == -1)
         {
@@ -196,6 +193,15 @@ void Shortest_Job_First(struct priqueue* pq, int index)
             exit(-10);
         }
     }
+    else
+    {
+        //printf("Process with id %d started at time %d\n", current_process->id, getClk());
+        write_output_file(current_process, 0);
+        waitpid(current_process->pid, &statloc, 0);
+        write_output_file(current_process, 1);
+        //printf("Process with id %d finished at time %d\n", current_process->id, getClk());
+    }
+    finished_processes++;
 }
 
 void Round_Robin_Scheduling(queue* Processes_Queue)
@@ -215,11 +221,15 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
             {
                 current_process->state = RUNNING;
                 printf("Process %d continued at time %d and its remaining time is %d.\n", current_process->id, getClk(), current_process->remainingTime);
+                current_process->waittime += getClk() - current_process->stoptime;
+                write_output_file(current_process, 3);
                 kill(current_process->pid, SIGCONT);
             }
             else
             {
                 printf("Process %d Started at time %d and its run time is %d.\n", current_process->id, getClk(),current_process->runningtime);
+                current_process->waittime = getClk() - current_process->arrivaltime;
+                write_output_file(current_process, 0);
                 current_process->state = RUNNING;
                 current_process->pid = fork();
                 if (current_process->pid == 0) {
@@ -250,6 +260,7 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
             if (current_process->remainingTime <= 0) {
                 // Process finished
                 printf("Process %d finished execution. at time : %d\n", current_process->id, getClk());
+                write_output_file(current_process, 1);
                 finished_processes++;
                 count--;
                 kill(current_process->pid, SIGKILL);
@@ -260,16 +271,16 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
                 if(Processes_Queue->actualcount == 0){
                 current_time=getClk();
                 last_time = current_time;
+                current_process->id, current_process->remainingTime;
+                current_process->stoptime = getClk();
                 kill(current_process->pid, SIGCONT);
-                }else{
-                // Preempt the current process;
-                printf("Process %d preempted at time : %d   (remaining time: %d).\n",
-                     current_process->id, current_time, current_process->remainingTime);
-                finished_processes++;
-            } 
+                }
+             
             else {
                 printf("Process %d preempted (remaining time: %d).\n",
                 current_process->id, current_process->remainingTime);
+                current_process->stoptime = getClk();
+                write_output_file(current_process, 2);
                 kill(current_process->pid, SIGSTOP);
                 }
                 // Re-enqueue the process
@@ -285,7 +296,6 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
         }
     current_time=getClk();
     }
-    last_time=current_time;
 }
 
 
