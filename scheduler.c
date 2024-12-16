@@ -36,6 +36,12 @@ int main(int argc, char *argv[])
         return -3;
     }
     fprintf(file, "#At time x process y state arr w total z remain y wait k\n");
+    file2 = fopen("scheduler.perf", "w");
+    if (file2 == NULL)
+    {
+        perror("Error, Cannot Open File\n");
+        return -3;
+    }
     struct queue* Processes_Queue = (struct queue* ) malloc(sizeof(struct queue));
     Processes_Queue->actualcount = 0;
     Processes_Queue->head = NULL;
@@ -143,10 +149,11 @@ int main(int argc, char *argv[])
        // printf("fp %d \n",finished_processes);
     }
     //int snd_id=msgsnd(msg_qid,&msg,sizeof(msg),!IPC_NOWAIT);
-
+    write_performance_file(atoi(argv[3]));
     free(Processes_Queue);
     free(Processes_PriQueue);
     free(processes_ids);
+    fclose(file2);
     fclose(file);
     destroyClk(true);
 }
@@ -198,7 +205,9 @@ void Shortest_Job_First(struct priqueue* pq, int index)
         //printf("Process with id %d started at time %d\n", current_process->id, getClk());
         write_output_file(current_process, 0);
         waitpid(current_process->pid, &statloc, 0);
+        current_process->remainingTime=0;
         write_output_file(current_process, 1);
+        
         //printf("Process with id %d finished at time %d\n", current_process->id, getClk());
     }
     finished_processes++;
