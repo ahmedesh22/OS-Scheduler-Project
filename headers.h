@@ -41,6 +41,7 @@ struct PCB
     int pid;
     int remainingTime;
     P_state state;
+    int memorysize; // Added for phase 2
 };
 
 

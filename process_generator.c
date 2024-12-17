@@ -93,12 +93,12 @@ int main(int argc, char *argv[])
         fgets(line, sizeof(line), file);
 
         // Read the real data
-        int id, arrival_time, run_time, priority;
+        int id, arrival_time, run_time, priority, memsize;
 
-        while (fscanf(file, "%d\t%d\t%d\t%d\n", &id, &arrival_time, &run_time, &priority) != EOF)
+        while (fscanf(file, "%d\t%d\t%d\t%d\t%d\n", &id, &arrival_time, &run_time, &priority, &memsize) != EOF) // Added memsize
         {
             struct PCB *process = (struct PCB *)malloc(sizeof(struct PCB));
-            init_process(id, arrival_time, run_time, priority, process);
+            init_process(id, arrival_time, run_time, priority, memsize, process);
             process->remainingTime = run_time;
             process->state = READY;
             struct node *Node = (struct node *)malloc(sizeof(struct node));

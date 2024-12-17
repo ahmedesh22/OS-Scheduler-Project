@@ -3,12 +3,13 @@
 
 
 // function to initialize a process
-void init_process(int id, int arr, int run, int pr, struct PCB *process)
+void init_process(int id, int arr, int run, int pr, int memsize, struct PCB *process)
 {
     process->id = id;
     process->arrivaltime = arr;
     process->runningtime = run;
     process->priority = pr;
+    process->memorysize = memsize;
 }
 struct node;
 struct node

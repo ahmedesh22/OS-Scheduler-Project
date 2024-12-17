@@ -1,6 +1,9 @@
 #include "headers.h"
 #include "queue.h"
 #include "Priqueue.h"
+#include "Tree.h"
+#include "Free_Memory_Table.h"
+#include "Memory_Table.h"
 
 int msg_qid;
 void Shortest_Job_First(struct priqueue* pq);
@@ -12,7 +15,10 @@ int quantum;
 int count;
 int noofprocess;
 
-
+/* Memory Variables */
+Memory_Table* MemTable;
+Free_Memory_Table* FreeMemTable; // Don't Forget to free
+BinaryTree* Tree;
 
 
 int main(int argc, char *argv[])
@@ -25,6 +31,22 @@ int main(int argc, char *argv[])
     quantum=atoi(argv[2]);
     count=atoi(argv[3]);
     noofprocess=count;
+    
+    /* Memory Variables */
+    MemTable = (Memory_Table*) malloc(sizeof(Memory_Table));
+    FreeMemTable = (Free_Memory_Table*) malloc(sizeof(Free_Memory_Table));
+    Tree = (BinaryTree*) malloc(sizeof(BinaryTree));
+    Initialize_Tree(Tree);
+    Free_Entry* f_entry = (Free_Entry*) malloc(sizeof(Free_Entry));
+    Initialize_Free_Entry(f_entry, Tree->root);
+    AddFreeEntry(FreeMemTable, f_entry);
+
+    // Now You have A Root (pointer to TreeNode, check Initialize_Tree) for the tree and I put it as the first free memory available to allocate into
+    // When we receive a message, we should check the free memory table and find the smallest available block of memory that we can allocate into
+    // --> Check Free_Memory_Table (I made the function AddFreeEntry to put free blocks of data as a linked list and this list is sorted from small to big)
+    // So we can loop on the linked list and find the smallest place we can fit the process into
+    // After that we can call AddTreeNodes if we need to split this block of data, or we can call AllocateTreeNode
+
     file = fopen("scheduler.log", "w");
     if (file == NULL)
     {
@@ -59,7 +81,7 @@ int main(int argc, char *argv[])
             if (receive_value != -1 && (scheduling_algorithm == SJF))
             {
                 struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
-                setprinode(message.process, message.process.runningtime, READY,Node);
+                setprinode(message.process, message.process.runningtime, READY,Node); // I think here there is no need to send READY since its state is already READY
                 prienqueue(Processes_PriQueue, Node);
                 printf("enqueued id: %d\n", Node->process.id);
             }
@@ -151,6 +173,14 @@ int main(int argc, char *argv[])
     write_performance_file(atoi(argv[3]));
     free(Processes_Queue);
     free(Processes_PriQueue);
+
+    FreeMT(MemTable); // to free entries in the memory table
+    free(MemTable); // free memory table itself
+    FreeFMT(FreeMemTable); 
+    free(FreeMemTable);
+    FreeTree(Tree->root); // free all tree nodes
+    free(Tree); // free tree itself
+    
     fclose(file2);
     fclose(file);
     destroyClk(false);
@@ -201,14 +231,16 @@ void Shortest_Job_First(struct priqueue* pq)
     }
     else
     {
-        //printf("Process with id %d started at time %d\n", current_process->id, getClk());
+        printf("Process with id %d started at time %d\n", current_process->id, getClk());
         current_process->starttime = getClk();
         write_output_file(current_process, 0);
+        // Call the function to allocate memory here
+        // Call Output memory file function here
         waitpid(current_process->pid, &statloc, 0);
         current_process->remainingTime = current_process->runningtime - (getClk() - current_process->starttime);
         write_output_file(current_process, 1);
+        printf("Process with id %d finished at time %d\n", current_process->id, getClk());
         kill(current_process->pid,SIGKILL);
-        //printf("Process with id %d finished at time %d\n", current_process->id, getClk());
     }
     finished_processes++;
 }
