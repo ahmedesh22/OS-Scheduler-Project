@@ -65,6 +65,13 @@ int main(int argc, char *argv[])
                 arg2[2] = argv[5];
             }
         }
+        else
+        {
+            if (argc > 4)
+            {
+                printf("Additional paramaters are ignored\n");
+            }
+        }
 
         // printf("Chosen algo %d\n", scheduling_algorithm);
         // printf("Quanta %d\n", quantum);
@@ -88,7 +95,7 @@ int main(int argc, char *argv[])
 
         while (fscanf(file, "%d\t%d\t%d\t%d\n", &id, &arrival_time, &run_time, &priority) != EOF)
         {
-            struct processData *process = (struct processData *)malloc(sizeof(struct processData));
+            struct PCB *process = (struct PCB *)malloc(sizeof(struct PCB));
             init_process(id, arrival_time, run_time, priority, process);
             process->remainingTime = run_time;
             process->state = READY;

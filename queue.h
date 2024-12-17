@@ -3,7 +3,7 @@
 
 
 // function to initialize a process
-void init_process(int id, int arr, int run, int pr, struct processData *process)
+void init_process(int id, int arr, int run, int pr, struct PCB *process)
 {
     process->id = id;
     process->arrivaltime = arr;
@@ -13,7 +13,7 @@ void init_process(int id, int arr, int run, int pr, struct processData *process)
 struct node;
 struct node
 {
-    struct processData item; 
+    struct PCB item; 
     struct node *next; 
 };
 typedef struct queue
@@ -22,7 +22,7 @@ typedef struct queue
     int actualcount;
 } queue;
 
-void setnode(struct processData item, struct node *node)
+void setnode(struct PCB item, struct node *node)
 {
     if(node==NULL)
     {
@@ -40,7 +40,7 @@ bool isempty(struct queue *queue)
     }
     return false;
 }
-bool dequeue(struct queue*queue,struct processData* data)
+bool dequeue(struct queue*queue,struct PCB* data)
 {
     if(isempty(queue))
     {
@@ -88,7 +88,7 @@ void print_queue(struct queue *q)
 }
 
 
-bool dequeue_from_back(struct queue *queue, struct processData *data)
+bool dequeue_from_back(struct queue *queue, struct PCB *data)
 {
     if (isempty(queue))
     {

@@ -3,7 +3,7 @@
 #include <time.h>
 #define null 0
 
-struct processData
+struct PCB
 {
     int arrivaltime;
     int priority;
@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     FILE *pFile;
     pFile = fopen("processes.txt", "w");
     int no;
-    struct processData pData;
+    struct PCB pData;
     printf("Please enter the number of processes you want to generate: ");
     scanf("%d", &no);
     srand(time(null));

@@ -4,12 +4,12 @@
 struct prinode;
 struct prinode
 {
-    struct processData process;
+    struct PCB process;
     int pri;
     struct prinode * next;
 
 };
-void setprinode(struct processData item,int priority,P_state state,struct prinode *node)
+void setprinode(struct PCB item,int priority,P_state state,struct prinode *node)
 {
     if(node==NULL)
     {
@@ -75,7 +75,7 @@ void prienqueue( struct priqueue *queue,struct prinode *node)
     current->next=node;
     queue->actualcount++;
 }
-bool pridequeue(struct processData *pd,struct priqueue *queue)
+bool pridequeue(struct PCB *pd,struct priqueue *queue)
 {
     if(priisempty(queue))
     {

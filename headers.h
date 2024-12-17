@@ -29,7 +29,7 @@ typedef enum P_state {
   READY
 } P_state ;
 
-struct processData
+struct PCB
 {
     int arrivaltime;
     int priority;
@@ -60,7 +60,7 @@ struct msgbuff
 {
     long mtype;
     //char mtext[256];
-    struct processData process;
+    struct PCB process;
 };
 ///==============================
 //don't mess with this variable//
@@ -105,7 +105,7 @@ void destroyClk(bool terminateAll)
         killpg(getpgrp(), SIGINT);
     }
 }
-void write_output_file(struct processData* pd, int state) // States are Started (0), Finished(1), Stopped(2), Resumed(3) 
+void write_output_file(struct PCB* pd, int state) // States are Started (0), Finished(1), Stopped(2), Resumed(3) 
 {
     if (state == 0) // Started
     {
