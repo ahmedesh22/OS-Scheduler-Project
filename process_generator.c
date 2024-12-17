@@ -189,7 +189,6 @@ void clearResources(int signum)
 {
     destroyClk(true);
     msgctl(msg_qid,IPC_RMID, (struct msqid_ds *)0);
-    killpg(getpgrp(), SIGKILL);
     kill(getpid(), SIGKILL);
     signal(SIGINT, clearResources);
     

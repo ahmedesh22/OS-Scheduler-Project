@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
     free(Processes_PriQueue);
     fclose(file2);
     fclose(file);
-    destroyClk(true);
+    destroyClk(false);
     // kill(getppid(),SIGINT);
 }
 
