@@ -5,7 +5,6 @@
 int msg_qid;
 void Shortest_Job_First(struct priqueue* pq);
 int finished_processes = 0;
-void sighandler(int signum);
 void Round_Robin_Scheduling(queue* Processes_Queue);
 int Highest_Priority_First(struct priqueue* pq);
 Scheduling_Algorithm scheduling_algorithm;
@@ -19,7 +18,6 @@ int noofprocess;
 int main(int argc, char *argv[])
 {
     initClk();
-    signal(SIGUSR1, sighandler);
     struct msgbuff message;
     key_t msg_id=ftok("keyfile",'A');
     msg_qid=msgget(msg_id,0666|IPC_CREAT);
@@ -497,12 +495,4 @@ int Highest_Priority_First(struct priqueue* pq)
     // then we should preempt (SIGSTOP) the running process and fork this new process
     // Then after this process finishes we should check whether we will SIGCONT the stopped
     // process or fork another process
-}
-
-
-void sighandler(int signum)
-{
-    //finished_processes++;
-    //finished_processes++;
-    signal(SIGUSR1, sighandler);
 }

@@ -2,6 +2,7 @@
 #include "queue.h"
 void clearResources(int);
 int msg_qid;
+int pid_clk, pid_schd;
 int main(int argc, char *argv[])
 {
     signal(SIGINT, clearResources);
@@ -11,6 +12,7 @@ int main(int argc, char *argv[])
     Processes_Queue->head = NULL;
     Processes_Queue->actualcount = 0;
     int scheduling_algorithm;
+    
     int quantum = -1;
     char *arg[] = {"./clk.out", NULL};
     char *arg2[] = {"./scheduler.out", argv[3], "-1", "00000", NULL};
@@ -120,7 +122,7 @@ int main(int argc, char *argv[])
     // 3. Initiate and create the scheduler and clock processes.
 
     // Fork The clock
-    int pid_clk, pid_schd;
+    
     pid_clk = fork();
     if (pid_clk == -1)
     {
@@ -181,16 +183,21 @@ int main(int argc, char *argv[])
     free(Processes_Queue);
     int statloc;
     waitpid(pid_schd, &statloc, 0);
-    raise(SIGINT);
-    
+    printf("Destroyed\n");
+    destroyClk(true);
 }
 
 void clearResources(int signum)
 {
-    destroyClk(true);
-    msgctl(msg_qid,IPC_RMID, (struct msqid_ds *)0);
-    kill(getpid(), SIGKILL);
+    msgctl(msg_qid,IPC_RMID, (struct msqid_ds *)0); 
+    // kill(getpid(), SIGKILL);
+    kill(pid_schd, SIGKILL);
+    wait((void *) 0);
+    kill(pid_clk, SIGKILL);
+    wait((void *) 0);
+    kill (getpid(),SIGKILL);
     signal(SIGINT, clearResources);
     
+
     // TODO Clears all resources in case of interruption
 }

@@ -19,7 +19,6 @@ int main(int agrc, char *argv[])
     }
 
     //printf("The process with id %s finished(or stopped) at %d\n", argv[1], getClk());
-    kill(getppid(), SIGUSR1);
     destroyClk(false);
     return 0;
 }
