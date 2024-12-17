@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     free(Processes_Queue);
     int statloc;
     waitpid(pid_schd, &statloc, 0);
-    //raise(SIGINT);
+    raise(SIGINT);
     
 }
 

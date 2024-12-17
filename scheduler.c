@@ -156,6 +156,7 @@ int main(int argc, char *argv[])
     fclose(file2);
     fclose(file);
     destroyClk(true);
+    // kill(getppid(),SIGINT);
 }
 
 void Shortest_Job_First(struct priqueue* pq)
@@ -208,7 +209,7 @@ void Shortest_Job_First(struct priqueue* pq)
         waitpid(current_process->pid, &statloc, 0);
         current_process->remainingTime = current_process->runningtime - (getClk() - current_process->starttime);
         write_output_file(current_process, 1);
-        
+        kill(current_process->pid,SIGKILL);
         //printf("Process with id %d finished at time %d\n", current_process->id, getClk());
     }
     finished_processes++;
@@ -367,6 +368,7 @@ int Highest_Priority_First(struct priqueue* pq)
             printf("Process %d Finished at time %d.\n", current_process->id, getClk() );
             finished_processes++;
             write_output_file(current_process,1);
+            kill(current_process->pid,SIGKILL);
             free(current_process);
             pridequeue(current_process, pq);            
             if(current_process->state == WAITING)
@@ -469,6 +471,7 @@ int Highest_Priority_First(struct priqueue* pq)
         {
             printf("Process %d Finished at time %d.\n", current_process->id, getClk()); 
             write_output_file(current_process,1);
+            kill(current_process->pid,SIGKILL);
             finished_processes++;  
             return 1;
         }
@@ -480,6 +483,7 @@ int Highest_Priority_First(struct priqueue* pq)
         {
             printf("Process %d Finished at time %d.\n", current_process->id, getClk() ); 
             write_output_file(current_process,1);
+            kill(current_process->pid,SIGKILL);
             finished_processes++;  
             current_process=NULL;
             return 0;
