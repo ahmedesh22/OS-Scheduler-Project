@@ -2,20 +2,27 @@
 #include "headers.h"
 
 
+
 // Tree Node Definitions and Functions
 typedef struct TreeNode 
 {
     int size;
     int status; // (0 --> Free) (1 --> Allocated)
+    int from;
+    int to; 
+    struct TreeNode* parent;
     struct TreeNode* Lchild;
     struct TreeNode* Rchild;
     struct TreeNode* Buddy; // A pointer to the block next to it. (its sibling)
 } TreeNode;
 
-void Initialize_TreeNode(TreeNode *t, int size, int status)
+void Initialize_TreeNode(TreeNode *t, int size, int status, int from, int to, TreeNode *parent)
 {
     t->size = size;
     t->status = status;
+    t->from = from;
+    t->to = to;
+    t->parent = parent;
     t->Lchild = NULL;
     t->Rchild = NULL;
     // The parent node will bre responsible for setting the buddy pointer
@@ -34,8 +41,8 @@ void AddTreeNodes (TreeNode* parentnode) // will be needed if we want to split a
     TreeNode* rchild = (TreeNode*) malloc(sizeof(TreeNode));
     
     // initialize nodes with half the size of the parent and initially set them both as free (not allocated yet)
-    Initialize_TreeNode(lchild, parentnode->size / 2, 0);
-    Initialize_TreeNode(rchild, parentnode->size / 2, 0);
+    Initialize_TreeNode(lchild, parentnode->size / 2, 0, parentnode->from, parentnode->from + (parentnode->to / 2), parentnode);
+    Initialize_TreeNode(rchild, parentnode->size / 2, 0, (parentnode->from + (parentnode->to / 2)) + 1, parentnode->to, parentnode);
     
     // setting the buddy pointer
     lchild->Buddy = parentnode->Rchild;
@@ -55,7 +62,7 @@ void AllocateTreeNode (TreeNode* node)
 void Initialize_Tree (BinaryTree* tree)
 {
     tree->root = (TreeNode*) malloc(sizeof(TreeNode));
-    Initialize_TreeNode(tree->root, 1024, 0); // Initialize the biggest memory block (1024) and initially set its status to be free
+    Initialize_TreeNode(tree->root, 1024, 0, 0, 1023, NULL); // Initialize the biggest memory block (1024) and initially set its status to be free
 }
 
 
@@ -75,4 +82,6 @@ void FreeTree(TreeNode* root) // Call at the end of simulation to ensure that we
     
     free(root);
 }
+
+
 

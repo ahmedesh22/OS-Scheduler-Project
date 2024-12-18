@@ -144,3 +144,14 @@ void write_performance_file(int count)
     fprintf(file2,"Avg WTA = %.2f\n",(float)(total_WTA/count));
     fprintf(file2,"Avg Waiting = %.2f\n",(float)(total_wait/count));
 }
+
+
+int CheckSize(int processSize, int memorySize)
+{
+    // to be cont.
+    if (memorySize / 2 >= processSize)
+    {
+        return 1;
+    }
+    return 0;
+}

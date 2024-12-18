@@ -54,7 +54,7 @@ bool priisempty(struct priqueue *queue)
     }
     return false;
 }
-void prienqueue( struct priqueue *queue,struct prinode *node)
+void prienqueue(struct priqueue *queue,struct prinode *node)
 {
     if(queue->head == NULL || queue->head->pri > node->pri)
     {
@@ -68,6 +68,28 @@ void prienqueue( struct priqueue *queue,struct prinode *node)
     }
     struct prinode *current = queue->head;
     while(current->next !=NULL && (current->next->pri)<=(node->pri))
+    {
+        current=current->next;
+    }
+    node->next=current->next;
+    current->next=node;
+    queue->actualcount++;
+}
+
+void priwaitenqueue(struct priqueue *queue,struct prinode *node)
+{
+    if(queue->head == NULL || queue->head->process.memorysize > node->process.memorysize)
+    {
+        node->next=queue->head;
+        queue->head = node;
+        queue->head->process = node->process;
+        queue->head->pri = node->pri;
+        
+        queue->actualcount++;
+        return;
+    }
+    struct prinode *current = queue->head;
+    while(current->next !=NULL && (current->next->process.memorysize)<=(node->process.memorysize))
     {
         current=current->next;
     }

@@ -1,18 +1,18 @@
 #pragma once
-#include"Tree.h"
 #include"headers.h"
+#include "Tree.h"
 
 // Free_Entry Definitions and Functions
 typedef struct Free_Entry
 {
-    TreeNode* Block;
+    TreeNode* node;
     int size; // Size of allocated block
     struct Free_Entry* next;
 } Free_Entry;
 
 void Initialize_Free_Entry(Free_Entry *e, TreeNode* block)
 {
-    e->Block = block;
+    e->node = block;
     e->size = block->size;
     e->next = NULL;
 }
@@ -26,14 +26,14 @@ typedef struct Free_Memory_Table
 
 void AddFreeEntry(Free_Memory_Table* fmt, Free_Entry* e)
 {
-    if(fmt->head == NULL || fmt->head->size > e->size) // insert at the beginning
+    if(fmt->head == NULL || fmt->head->node->from > e->node->from) // insert at the beginning
     {
         e->next=fmt->head;
         fmt->head = e;
         return;
     }
     Free_Entry* current = fmt->head;
-    while(current->next != NULL && (current->next->size)<=(e->size))
+    while(current->next != NULL && (current->next->node->from) < (e->node->from))
     {
         current=current->next;
     }
@@ -63,3 +63,89 @@ void FreeFMT(Free_Memory_Table* fmt)
 }
 
 
+Free_Entry* CanAllocate(Free_Memory_Table* fmt,  int size) // size given to check if we can allocate it or not
+{
+    // loop on the free memory table list to check if we can allocate it or not
+    Free_Entry* fe = fmt->head;
+    while (fe)
+    {
+        if (size <= fe->size)
+        {
+            return fe; // Can be allocated
+        }
+        fe = fe->next;
+    }
+    return NULL; // No Location to allocate into
+}
+
+TreeNode* RemoveFromFreeMemTable(Free_Memory_Table* fmt, Free_Entry* fe)
+{
+    Free_Entry* fptr = fmt->head;
+    TreeNode* tptr;
+    if (fptr == NULL)
+    {
+        return NULL;
+    }
+    if (fptr->node->to == fe->node->to)
+    {
+        // remove head
+        tptr=fptr->node;
+        fmt->head = fmt->head->next;
+        free(fptr);
+        return tptr;
+    }
+    // More than one entry in free memory table 
+    Free_Entry* next = fptr->next;
+    while (next)
+    {
+        if (next->node->to == fe->node->to)
+        {
+            tptr=next->node;
+            fptr->next = next->next;
+            free(next);
+            return tptr;
+        }
+        fptr = fptr->next;
+        next = fptr->next;
+    }
+    return NULL;
+}
+
+
+void printFreeMemTable(Free_Memory_Table* fmt)
+{
+    Free_Entry* e = fmt->head;
+    if (!e)
+    {
+        printf("Free Memory Table is empty\n");
+        return;
+    }
+    else
+    {
+        while (e)
+        {
+            printf("Free: From: %d, To: %d\n", e->node->from, e->node->to);
+            e = e->next;
+        }
+    }
+}
+
+TreeNode* Split(Free_Memory_Table* fmt, TreeNode* parent, int psize)
+{
+    AddTreeNodes(parent);
+    TreeNode* lchild = parent->Lchild;
+    // put right Child in free memory table
+    Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+    Initialize_Free_Entry(fe, parent->Rchild);
+    AddFreeEntry(fmt, fe);
+    while (CheckSize(psize, lchild->size) == 1)
+    {
+        AddTreeNodes(lchild);
+        // put right Child in free memory table
+        Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+        Initialize_Free_Entry(fe, lchild->Rchild);
+        AddFreeEntry(fmt, fe);
+        lchild = lchild->Lchild;
+    }
+    return lchild;
+}

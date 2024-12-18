@@ -35,6 +35,7 @@ void AddEntry(Memory_Table* mt, Entry* e)
     }
     else
     {
+        e->Block->status = 1; // set it as allocated
         e->next = mt->head;
         mt->head = e;
     }
@@ -59,4 +60,59 @@ void FreeMT(Memory_Table* mt)
         }
         free(e);
     }
+}
+
+void printMemTable(Memory_Table* mt)
+{
+    Entry* e = mt->head;
+    if (!e)
+    {
+        printf("Memory Table is empty\n");
+        return;
+    }
+    else
+    {
+        while (e)
+        {
+            printf("Memory: From: %d, To: %d\n", e->Block->from, e->Block->to);
+            e = e->next;
+        }
+    }
+}
+
+
+TreeNode* RemoveFromMemTable(Memory_Table* mt, int pid)
+{
+    //check for merge
+    Entry* eptr = mt->head;
+    TreeNode* node;
+    if (eptr == NULL)
+    {
+        return NULL;
+    }
+    if (eptr->Process_ID == pid)
+    {
+        // remove head
+        mt->head = mt->head->next;
+        eptr->Block->status = 0;
+        node = eptr->Block;
+        free(eptr);
+        return node;
+    }
+    // More than one entry in free memory table 
+    Entry* next = eptr->next;
+    while (next)
+    {
+        if (next->Process_ID == pid)
+        {
+            node = next->Block;
+            node->status = 0;
+            eptr->next = next->next;
+            free(next);
+            return node;
+        }
+        eptr = eptr->next;
+        next = eptr->next;
+    }
+    return NULL;
 }

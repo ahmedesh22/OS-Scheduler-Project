@@ -19,6 +19,7 @@ int noofprocess;
 Memory_Table* MemTable;
 Free_Memory_Table* FreeMemTable; // Don't Forget to free
 BinaryTree* Tree;
+struct priqueue* Waiting_Queue;
 
 
 int main(int argc, char *argv[])
@@ -40,6 +41,9 @@ int main(int argc, char *argv[])
     Free_Entry* f_entry = (Free_Entry*) malloc(sizeof(Free_Entry));
     Initialize_Free_Entry(f_entry, Tree->root);
     AddFreeEntry(FreeMemTable, f_entry);
+    Waiting_Queue = (struct priqueue*) malloc(sizeof(struct priqueue));
+    //printf("size: %d\n", FreeMemTable->head->node->size);
+
 
     // Now You have A Root (pointer to TreeNode, check Initialize_Tree) for the tree and I put it as the first free memory available to allocate into
     // When we receive a message, we should check the free memory table and find the smallest available block of memory that we can allocate into
@@ -82,8 +86,49 @@ int main(int argc, char *argv[])
             {
                 struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
                 setprinode(message.process, message.process.runningtime, READY,Node); // I think here there is no need to send READY since its state is already READY
-                prienqueue(Processes_PriQueue, Node);
-                printf("enqueued id: %d\n", Node->process.id);
+                
+                // ask if we can allocate this process right now or not
+                // Call CanAllocate()
+                Free_Entry* free_e = CanAllocate(FreeMemTable, Node->process.memorysize);
+                if (free_e == NULL)
+                {
+                    // Enqueue in the waiting queue
+                    priwaitenqueue(Waiting_Queue, Node);
+                }
+                else
+                {
+                    // Now, the process can be allocated, check whether it needs splitting or not
+                    if (CheckSize(Node->process.memorysize, free_e->size) == 1)
+                    {
+                        // We can Split
+                        // Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+                        TreeNode* parent = RemoveFromFreeMemTable(FreeMemTable, free_e);
+                        TreeNode* ptr = Split(FreeMemTable, parent, Node->process.memorysize);
+
+                        Entry* e = (Entry*) malloc(sizeof(Entry));
+                        Initialize_Entry(e, Node->process.id, ptr);
+                        AddEntry(MemTable, e);
+                        printFreeMemTable(FreeMemTable);
+                        printMemTable(MemTable);
+                    }
+                    else
+                    {
+                        // Here no need to split
+                        free_e->node->status = 1; // Allocated
+                        // Add this entry to Memory Table
+                        Entry* e = (Entry*) malloc(sizeof(Entry));
+                        Initialize_Entry(e, Node->process.id, free_e->node);
+                        AddEntry(MemTable, e);
+                        // Remove this entry from Free Memory Table
+                        RemoveFromFreeMemTable(FreeMemTable, free_e);
+                        printFreeMemTable(FreeMemTable);
+                        printMemTable(MemTable);
+                    }
+                    prienqueue(Processes_PriQueue, Node);
+                    printf("enqueued id: %d\n", Node->process.id);
+                }
+                
+                
             }
             else if (receive_value != -1 && (scheduling_algorithm == HPF))
             {
@@ -240,6 +285,13 @@ void Shortest_Job_First(struct priqueue* pq)
         current_process->remainingTime = current_process->runningtime - (getClk() - current_process->starttime);
         write_output_file(current_process, 1);
         printf("Process with id %d finished at time %d\n", current_process->id, getClk());
+        Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+        TreeNode* nodeptr = RemoveFromMemTable(MemTable, current_process->id);
+        Initialize_Free_Entry(fe, nodeptr);
+        AddFreeEntry(FreeMemTable, fe);
+        printf("------------- A process has Finished ------- \n");
+        printFreeMemTable(FreeMemTable);
+        printMemTable(MemTable);
         kill(current_process->pid,SIGKILL);
     }
     finished_processes++;
