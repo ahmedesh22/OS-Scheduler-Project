@@ -105,9 +105,9 @@ int main(int argc, char *argv[])
                         // We can Split
                         // Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
                         TreeNode* parent = RemoveFromFreeMemTable(FreeMemTable, free_e);
-                        printf("After Free Memory Removal: \n");
-                        printFreeMemTable(FreeMemTable);
-                        printf("-------------\n");
+                        printf("After Free Memory Removal: Split\n");
+                        //printFreeMemTable(FreeMemTable);
+                        //printf("-------------\n");
                         TreeNode* ptr = Split(FreeMemTable, parent, Node->process.memorysize);
 
                         Entry* e = (Entry*) malloc(sizeof(Entry));
@@ -126,6 +126,7 @@ int main(int argc, char *argv[])
                         AddEntry(MemTable, e);
                         // Remove this entry from Free Memory Table
                         RemoveFromFreeMemTable(FreeMemTable, free_e);
+                        printf("After Free Memory Removal: withu spliting\n");
                         printFreeMemTable(FreeMemTable);
                         printMemTable(MemTable);
                     }
@@ -312,6 +313,7 @@ void Shortest_Job_First(struct priqueue* pq)
             printf("Process with id %d finished at time %d\n", current_process->id, getClk());
             Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
             TreeNode* nodeptr = RemoveFromMemTable(MemTable, current_process->id);
+            nodeptr=Merge(FreeMemTable,nodeptr);
             Initialize_Free_Entry(fe, nodeptr);
             AddFreeEntry(FreeMemTable, fe);
             printf("------------- A process has Finished ------- \n");

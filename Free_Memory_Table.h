@@ -149,3 +149,28 @@ TreeNode* Split(Free_Memory_Table* fmt, TreeNode* parent, int psize)
     }
     return lchild;
 }
+TreeNode* Merge(Free_Memory_Table* fmt,TreeNode*node)
+{
+    Free_Entry*fe;
+    if(!node)
+    {
+        return NULL;
+    }
+    if(!fmt->head)
+    {
+        return node;
+    }
+    while(node->status==0 && node->parent &&node->Buddy->status==0)
+    {
+        fe=(Free_Entry*)malloc(sizeof(Free_Entry));
+        Initialize_Free_Entry(fe,node->Buddy);
+        RemoveFromFreeMemTable(fmt,fe);
+        node=node->parent;
+        free(node->Lchild);
+        free(node->Rchild);
+        node->Lchild=NULL;
+        node->Rchild=NULL;
+        node->status=0;
+    }
+    return node;
+}
