@@ -171,6 +171,50 @@ int main(int argc, char *argv[])
             }
             else
             {
+                if((scheduling_algorithm == SJF)&&Waiting_Queue->head)
+                {
+                    Free_Entry* free_e = CanAllocate(FreeMemTable, Waiting_Queue->head->process.memorysize);
+                    if (free_e)
+                    {
+                        struct PCB*process=(struct PCB*)malloc(sizeof(struct PCB));
+                        pridequeue(process,Waiting_Queue);
+                        printf("b3d el dequeue id %d ",process->id);
+                        struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
+                        setprinode(*process, process->runningtime, READY,Node);
+                        if (CheckSize(Node->process.memorysize, free_e->size) == 1)
+                        {
+                            // We can Split
+                            // Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+                            TreeNode* parent = RemoveFromFreeMemTable(FreeMemTable, free_e);
+                            printf("From WAiting After Free Memory Removal: Split\n");
+                            //printFreeMemTable(FreeMemTable);
+                            //printf("-------------\n");
+                            TreeNode* ptr = Split(FreeMemTable, parent, Node->process.memorysize);
+
+                            Entry* e = (Entry*) malloc(sizeof(Entry));
+                            Initialize_Entry(e, Node->process.id, ptr);
+                            AddEntry(MemTable, e);
+                            printFreeMemTable(FreeMemTable);
+                            printMemTable(MemTable);
+                        }
+                        else
+                        {
+                            // Here no need to split
+                            free_e->node->status = 1; // Allocated
+                            // Add this entry to Memory Table
+                            Entry* e = (Entry*) malloc(sizeof(Entry));
+                            Initialize_Entry(e,Node->process.id, free_e->node);
+                            AddEntry(MemTable, e);
+                            // Remove this entry from Free Memory Table
+                            RemoveFromFreeMemTable(FreeMemTable, free_e);
+                            printf("From WaitingAfter Free Memory Removal: withu spliting\n");
+                            printFreeMemTable(FreeMemTable);
+                            printMemTable(MemTable);
+                        }
+                        prienqueue(Processes_PriQueue, Node);
+                        printf("enqueued From Waiting id: %d\n", Node->process.id);
+                    }
+                }
                 
                 break;
             }
