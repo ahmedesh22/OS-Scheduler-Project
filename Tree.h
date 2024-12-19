@@ -40,18 +40,18 @@ void AddTreeNodes (TreeNode* parentnode) // will be needed if we want to split a
     TreeNode* lchild = (TreeNode*) malloc(sizeof(TreeNode));
     TreeNode* rchild = (TreeNode*) malloc(sizeof(TreeNode));
 
-    int mid = parentnode->from + (parentnode->to - parentnode->from) / 2;
+    int mid = parentnode->from + (parentnode->to - parentnode->from) / 2; //== (from+to) / 2
     
     // initialize nodes with half the size of the parent and initially set them both as free (not allocated yet)
     Initialize_TreeNode(lchild, parentnode->size / 2, 0, parentnode->from, mid, parentnode);
     Initialize_TreeNode(rchild, parentnode->size / 2, 0, mid + 1, parentnode->to, parentnode);
-    
+    parentnode->Lchild = lchild;
+    parentnode->Rchild = rchild;
     // setting the buddy pointer
     lchild->Buddy = parentnode->Rchild;
     rchild->Buddy = parentnode->Lchild;
 
-    parentnode->Lchild = lchild;
-    parentnode->Rchild = rchild;
+  
 }
 
 void AllocateTreeNode (TreeNode* node)
