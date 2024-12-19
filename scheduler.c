@@ -143,6 +143,7 @@ int main(int argc, char *argv[])
                 prienqueue(Processes_PriQueue, Node);
                 //printf("enqueued id: %d\n", Node->process.id);
                 count--;
+                
             }
             else if (receive_value != -1 && scheduling_algorithm == RR)
             {
@@ -178,7 +179,7 @@ int main(int argc, char *argv[])
                     {
                         struct PCB*process=(struct PCB*)malloc(sizeof(struct PCB));
                         pridequeue(process,Waiting_Queue);
-                        printf("b3d el dequeue id %d ",process->id);
+                        printf("b3d el dequeue id %d \n",process->id);
                         struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
                         setprinode(*process, process->runningtime, READY,Node);
                         if (CheckSize(Node->process.memorysize, free_e->size) == 1)
@@ -213,6 +214,7 @@ int main(int argc, char *argv[])
                         }
                         prienqueue(Processes_PriQueue, Node);
                         printf("enqueued From Waiting id: %d\n", Node->process.id);
+                        free(process);
                     }
                 }
                 
@@ -479,7 +481,6 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
 }
 
 
-
 int Highest_Priority_First(struct priqueue* pq)
 {
     static struct PCB* current_process = NULL;
@@ -532,6 +533,7 @@ int Highest_Priority_First(struct priqueue* pq)
             write_output_file(current_process,1);
             kill(current_process->pid,SIGKILL);
             free(current_process);
+            current_process=NULL;
             pridequeue(current_process, pq);            
             if(current_process->state == WAITING)
             {
@@ -634,6 +636,8 @@ int Highest_Priority_First(struct priqueue* pq)
             printf("Process %d Finished at time %d.\n", current_process->id, getClk()); 
             write_output_file(current_process,1);
             kill(current_process->pid,SIGKILL);
+            free(current_process);
+            current_process=NULL;
             finished_processes++;  
             return 1;
         }
@@ -646,6 +650,8 @@ int Highest_Priority_First(struct priqueue* pq)
             printf("Process %d Finished at time %d.\n", current_process->id, getClk() ); 
             write_output_file(current_process,1);
             kill(current_process->pid,SIGKILL);
+            free(current_process);
+            current_process=NULL;
             finished_processes++;  
             current_process=NULL;
             return 0;

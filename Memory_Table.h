@@ -30,6 +30,7 @@ void AddEntry(Memory_Table* mt, Entry* e)
 {
     if (mt->head == NULL)
     {
+        e->Block->status = 1;
         mt->head = e;
         return;
     }
@@ -74,7 +75,7 @@ void printMemTable(Memory_Table* mt)
     {
         while (e)
         {
-            printf("Memory: From: %d, To: %d\n", e->Block->from, e->Block->to);
+            printf("Memory: From: %d, To: %d \n", e->Block->from, e->Block->to);
             e = e->next;
         }
     }
