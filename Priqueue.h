@@ -110,3 +110,16 @@ bool pridequeue(struct PCB *pd,struct priqueue *queue)
     queue->actualcount--;
     return true;
 }
+
+bool pridequeue2(struct priqueue *queue)
+{
+    if(priisempty(queue))
+    {
+        return false;
+    }
+    struct prinode * deleteptr =queue->head;
+    queue->head=queue->head->next;
+    free(deleteptr);
+    queue->actualcount--;
+    return true;
+}

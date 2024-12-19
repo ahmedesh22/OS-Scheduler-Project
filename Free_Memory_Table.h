@@ -142,9 +142,9 @@ TreeNode* Split(Free_Memory_Table* fmt, TreeNode* parent, int psize)
     {
         AddTreeNodes(lchild);
         // put right Child in free memory table
-        Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
-        Initialize_Free_Entry(fe, lchild->Rchild);
-        AddFreeEntry(fmt, fe);
+        Free_Entry* free_e = (Free_Entry*) malloc(sizeof(Free_Entry));
+        Initialize_Free_Entry(free_e, lchild->Rchild);
+        AddFreeEntry(fmt, free_e);
         lchild = lchild->Lchild;
     }
     return lchild;

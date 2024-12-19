@@ -21,6 +21,8 @@ Free_Memory_Table* FreeMemTable; // Don't Forget to free
 BinaryTree* Tree;
 struct priqueue* Waiting_Queue;
 
+//Pri-Queue
+struct priqueue* Processes_PriQueue;
 
 int main(int argc, char *argv[])
 {
@@ -33,6 +35,8 @@ int main(int argc, char *argv[])
     count=atoi(argv[3]);
     noofprocess=count;
     
+    
+
     /* Memory Variables */
     MemTable = (Memory_Table*) malloc(sizeof(Memory_Table));
     FreeMemTable = (Free_Memory_Table*) malloc(sizeof(Free_Memory_Table));
@@ -67,14 +71,13 @@ int main(int argc, char *argv[])
     struct queue* Processes_Queue = (struct queue* ) malloc(sizeof(struct queue));
     Processes_Queue->actualcount = 0;
     Processes_Queue->head = NULL;
-    struct priqueue* Processes_PriQueue = (struct priqueue*) malloc(sizeof(struct priqueue));
+    Processes_PriQueue = (struct priqueue*) malloc(sizeof(struct priqueue));
     Processes_PriQueue->actualcount = 0;
     Processes_PriQueue->head = NULL;
     if (scheduling_algorithm == RR && quantum == -1) {
     perror("Missing quantum.\n");
     exit(1);
     }
-    
     while (count > 0) 
     {
         while (true)
@@ -86,7 +89,6 @@ int main(int argc, char *argv[])
             {
                 struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
                 setprinode(message.process, message.process.runningtime, READY,Node); // I think here there is no need to send READY since its state is already READY
-                
                 // ask if we can allocate this process right now or not
                 // Call CanAllocate()
                 Free_Entry* free_e = CanAllocate(FreeMemTable, Node->process.memorysize);
@@ -103,6 +105,9 @@ int main(int argc, char *argv[])
                         // We can Split
                         // Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
                         TreeNode* parent = RemoveFromFreeMemTable(FreeMemTable, free_e);
+                        printf("After Free Memory Removal: \n");
+                        printFreeMemTable(FreeMemTable);
+                        printf("-------------\n");
                         TreeNode* ptr = Split(FreeMemTable, parent, Node->process.memorysize);
 
                         Entry* e = (Entry*) malloc(sizeof(Entry));
@@ -173,17 +178,17 @@ int main(int argc, char *argv[])
         // After receiving put the process sent in the queue/priqueue.
         
         switch (scheduling_algorithm){
-            case SJF: if (Processes_PriQueue->actualcount > 0)
+            case SJF: if (1)//if (Processes_PriQueue->actualcount > 0)
             {
                 Shortest_Job_First(Processes_PriQueue);
-                pridequeue(&Processes_PriQueue->head->process, Processes_PriQueue);
+                // pridequeue(&Processes_PriQueue->head->process, Processes_PriQueue);
                 //printf("Process %d with the following arrival time received successfully: %d \n",message.process.id,message.process.arrivaltime);
-                count--;
+                //count--; --> Decrement when we finish a process
             }
             break;
             case RR: if (1)
             {
-                
+
                 Round_Robin_Scheduling(Processes_Queue);
             }   
             break;  
@@ -196,7 +201,6 @@ int main(int argc, char *argv[])
             default: break;
         }   
         //add rest of cases here
-
         
     }
     count=atoi(argv[3]);
@@ -238,63 +242,93 @@ void Shortest_Job_First(struct priqueue* pq)
     // Dequeue
     // fork
     // child execute process file
+    static struct PCB* current_process = NULL;
     
-    struct PCB* current_process;
-    current_process = &pq->head->process;
+    
     int statloc;
-    int ppid = getpid();
+    int schd_pid = getpid();
     //pridequeue(pd, pq);
 
-    // if (index != 0)
-    // {
-    //     waitpid(processes_ids[index - 1], &statloc, 0);
-    // }
-    current_process->waittime = getClk() - current_process->arrivaltime;
-    current_process->pid = fork();
-    // waitpid(processes_ids[index], &statloc, 0);
-    if (current_process->pid == -1)
+
+    if (!current_process) // There is no current process on the CPU, Then Fork a process and start it
     {
-        perror("Error While Forking.\n");
-        exit(-10);
-    }
-    else if (current_process->pid == 0 && getppid() == ppid) // Child
-    {
-        char id[10];
-        sprintf(id, "%d", current_process->id);
-        char arr[10];
-        sprintf(arr, "%d", current_process->arrivaltime);
-        char run[10];
-        sprintf(run, "%d", current_process->runningtime);
-        char pri[10];
-        sprintf(pri, "%d", current_process->priority);
-        char *arg[] = {"./process.out", id, arr, run, pri, NULL};
-        if(execv("./process.out", arg) == -1)
+        if (!priisempty(pq))
         {
-            perror("Error in Execv\n");
+            current_process = (struct PCB*) malloc(sizeof(struct PCB));
+            // struct PCB temp_process;
+            // if (pridequeue(&temp_process, Processes_PriQueue))
+            // {
+            //     *current_process = temp_process;
+            // }
+            pridequeue(current_process, Processes_PriQueue);
+        }
+        else
+        {
+            return;
+        }
+        /* Starting The Process */
+        current_process->waittime = getClk() - current_process->arrivaltime;
+        current_process->starttime = getClk();
+        current_process->pid = fork();
+        // waitpid(processes_ids[index], &statloc, 0);
+        if (current_process->pid == -1)
+        {
+            perror("Error While Forking.\n");
             exit(-10);
         }
+        else if (current_process->pid == 0 && getppid() == schd_pid) // Child
+        {
+            char id[10];
+            sprintf(id, "%d", current_process->id);
+            char arr[10];
+            sprintf(arr, "%d", current_process->arrivaltime);
+            char run[10];
+            sprintf(run, "%d", current_process->runningtime);
+            char pri[10];
+            sprintf(pri, "%d", current_process->priority);
+            char *arg[] = {"./process.out", id, arr, run, pri, NULL};
+            if(execv("./process.out", arg) == -1)
+            {
+                perror("Error in Execv\n");
+                exit(-10);
+            }
+        }
+        else
+        {
+            
+            printf("Process with id %d started at time %d\n", current_process->id, getClk());
+            current_process->starttime = getClk();
+            write_output_file(current_process, 0);
+            return;
+        }
     }
-    else
+    else // There is a current process in the CPU
     {
-        printf("Process with id %d started at time %d\n", current_process->id, getClk());
-        current_process->starttime = getClk();
-        write_output_file(current_process, 0);
-        // Call the function to allocate memory here
-        // Call Output memory file function here
-        waitpid(current_process->pid, &statloc, 0);
-        current_process->remainingTime = current_process->runningtime - (getClk() - current_process->starttime);
-        write_output_file(current_process, 1);
-        printf("Process with id %d finished at time %d\n", current_process->id, getClk());
-        Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
-        TreeNode* nodeptr = RemoveFromMemTable(MemTable, current_process->id);
-        Initialize_Free_Entry(fe, nodeptr);
-        AddFreeEntry(FreeMemTable, fe);
-        printf("------------- A process has Finished ------- \n");
-        printFreeMemTable(FreeMemTable);
-        printMemTable(MemTable);
-        kill(current_process->pid,SIGKILL);
+        // Check if the process has finished
+        if (current_process->runningtime == getClk() - current_process->starttime) // Process is finished
+        {
+            current_process->remainingTime = current_process->runningtime - (getClk() - current_process->starttime);
+            write_output_file(current_process, 1);
+            printf("Process with id %d finished at time %d\n", current_process->id, getClk());
+            Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+            TreeNode* nodeptr = RemoveFromMemTable(MemTable, current_process->id);
+            Initialize_Free_Entry(fe, nodeptr);
+            AddFreeEntry(FreeMemTable, fe);
+            printf("------------- A process has Finished ------- \n");
+            printFreeMemTable(FreeMemTable);
+            printMemTable(MemTable);
+            free(current_process);
+            kill(current_process->pid,SIGKILL);
+            finished_processes++;
+            count--;
+            current_process = NULL;
+        }
+        else // Not Finished Yet
+        {
+            return;
+        }
     }
-    finished_processes++;
+    
 }
 
 void Round_Robin_Scheduling(queue* Processes_Queue)
