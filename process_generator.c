@@ -180,6 +180,7 @@ int main(int argc, char *argv[])
     }
     // 4. Use this function after creating the clock process to initialize clock.
     //rcv_id=msgrcv(msg_qid,&message,sizeof(message),0,!IPC_NOWAIT);
+    
     free(Processes_Queue);
     int statloc;
     waitpid(pid_schd, &statloc, 0);
