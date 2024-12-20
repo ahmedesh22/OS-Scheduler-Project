@@ -17,6 +17,7 @@ typedef short bool;
 #define false 0
 FILE *file;
 FILE *file2;
+FILE* file3; // For memory.log
 float total_run=0;
 float total_wait=0;
 float total_WTA=0;
@@ -154,4 +155,15 @@ int CheckSize(int processSize, int memorySize)
         return 1;
     }
     return 0;
+}
+void write_memory_file(int status, struct PCB* process, int from, int to) // (0 --> Freed) (1 --> Allocated)
+{
+    if (status == 1)
+    {
+        fprintf(file3, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(), process->memorysize, process->id, from, to);
+    }
+    else
+    {
+        fprintf(file3, "At time %d freed %d bytes for process %d from %d to %d\n", getClk(), process->memorysize, process->id, from, to);
+    }
 }

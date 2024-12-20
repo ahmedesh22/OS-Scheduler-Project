@@ -68,6 +68,13 @@ int main(int argc, char *argv[])
         perror("Error, Cannot Open File\n");
         return -3;
     }
+    file3 = fopen("memory.log", "w");
+    if (file3 == NULL)
+    {
+        perror("Error, Cannot Open File\n");
+        return -3;
+    }
+    fprintf(file3, "#At time x allocated y bytes for process z from i to j\n");
     struct queue* Processes_Queue = (struct queue* ) malloc(sizeof(struct queue));
     Processes_Queue->actualcount = 0;
     Processes_Queue->head = NULL;
@@ -130,8 +137,10 @@ int main(int argc, char *argv[])
                         printFreeMemTable(FreeMemTable);
                         printMemTable(MemTable);
                     }
+                    write_memory_file(1, &Node->process, MemTable->head->Block->from, MemTable->head->Block->to);
                     prienqueue(Processes_PriQueue, Node);
                     printf("enqueued id: %d\n", Node->process.id);
+                    
                 }
                 
                 
@@ -140,8 +149,50 @@ int main(int argc, char *argv[])
             {
                 struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
                 setprinode(message.process, message.process.priority, READY,Node);
-                prienqueue(Processes_PriQueue, Node);
-                //printf("enqueued id: %d\n", Node->process.id);
+                Free_Entry* free_e = CanAllocate(FreeMemTable, Node->process.memorysize);
+                if (free_e == NULL)
+                {
+                    // Enqueue in the waiting queue
+                    priwaitenqueue(Waiting_Queue, Node);
+                }
+                else
+                {
+                    // Now, the process can be allocated, check whether it needs splitting or not
+                    if (CheckSize(Node->process.memorysize, free_e->size) == 1)
+                    {
+                        // We can Split
+                        // Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+                        TreeNode* parent = RemoveFromFreeMemTable(FreeMemTable, free_e);
+                        printf("After Free Memory Removal: Split\n");
+                        //printFreeMemTable(FreeMemTable);
+                        //printf("-------------\n");
+                        TreeNode* ptr = Split(FreeMemTable, parent, Node->process.memorysize);
+
+                        Entry* e = (Entry*) malloc(sizeof(Entry));
+                        Initialize_Entry(e, Node->process.id, ptr);
+                        AddEntry(MemTable, e);
+                        printFreeMemTable(FreeMemTable);
+                        printMemTable(MemTable);
+                    }
+                    else
+                    {
+                        // Here no need to split
+                        free_e->node->status = 1; // Allocated
+                        // Add this entry to Memory Table
+                        Entry* e = (Entry*) malloc(sizeof(Entry));
+                        Initialize_Entry(e, Node->process.id, free_e->node);
+                        AddEntry(MemTable, e);
+                        // Remove this entry from Free Memory Table
+                        RemoveFromFreeMemTable(FreeMemTable, free_e);
+                        printf("After Free Memory Removal: withu spliting\n");
+                        printFreeMemTable(FreeMemTable);
+                        printMemTable(MemTable);
+                    }
+                    write_memory_file(1, &Node->process, MemTable->head->Block->from, MemTable->head->Block->to);
+                    prienqueue(Processes_PriQueue, Node);
+                    printf("enqueued id: %d\n", Node->process.id);
+                }
+                
                 
             }
             else if (receive_value != -1 && scheduling_algorithm == RR)
@@ -181,6 +232,51 @@ int main(int argc, char *argv[])
                         printf("b3d el dequeue id %d \n",process->id);
                         struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
                         setprinode(*process, process->runningtime, READY,Node);
+                        if (CheckSize(Node->process.memorysize, free_e->size) == 1)
+                        {
+                            // We can Split
+                            // Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+                            TreeNode* parent = RemoveFromFreeMemTable(FreeMemTable, free_e);
+                            printf("From WAiting After Free Memory Removal: Split\n");
+                            //printFreeMemTable(FreeMemTable);
+                            //printf("-------------\n");
+                            TreeNode* ptr = Split(FreeMemTable, parent, Node->process.memorysize);
+
+                            Entry* e = (Entry*) malloc(sizeof(Entry));
+                            Initialize_Entry(e, Node->process.id, ptr);
+                            AddEntry(MemTable, e);
+                            printFreeMemTable(FreeMemTable);
+                            printMemTable(MemTable);
+                        }
+                        else
+                        {
+                            // Here no need to split
+                            free_e->node->status = 1; // Allocated
+                            // Add this entry to Memory Table
+                            Entry* e = (Entry*) malloc(sizeof(Entry));
+                            Initialize_Entry(e,Node->process.id, free_e->node);
+                            AddEntry(MemTable, e);
+                            // Remove this entry from Free Memory Table
+                            RemoveFromFreeMemTable(FreeMemTable, free_e);
+                            printf("From WaitingAfter Free Memory Removal: withu spliting\n");
+                            printFreeMemTable(FreeMemTable);
+                            printMemTable(MemTable);
+                        }
+                        prienqueue(Processes_PriQueue, Node);
+                        printf("enqueued From Waiting id: %d\n", Node->process.id);
+                        free(process);
+                    }
+                }
+                if((scheduling_algorithm == HPF)&&Waiting_Queue->head)
+                {
+                    Free_Entry* free_e = CanAllocate(FreeMemTable, Waiting_Queue->head->process.memorysize);
+                    if (free_e)
+                    {
+                        struct PCB*process=(struct PCB*)malloc(sizeof(struct PCB));
+                        pridequeue(process,Waiting_Queue);
+                        printf("b3d el dequeue id %d \n",process->id);
+                        struct prinode* Node = (struct prinode*) malloc(sizeof(struct prinode));
+                        setprinode(*process, process->priority, READY,Node);
                         if (CheckSize(Node->process.memorysize, free_e->size) == 1)
                         {
                             // We can Split
@@ -275,7 +371,7 @@ int main(int argc, char *argv[])
     free(FreeMemTable);
     FreeTree(Tree->root); // free all tree nodes
     free(Tree); // free tree itself
-    
+    fclose(file3);
     fclose(file2);
     fclose(file);
     destroyClk(false);
@@ -358,6 +454,7 @@ void Shortest_Job_First(struct priqueue* pq)
             printf("Process with id %d finished at time %d\n", current_process->id, getClk());
             Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
             TreeNode* nodeptr = RemoveFromMemTable(MemTable, current_process->id);
+            write_memory_file(0, current_process, nodeptr->from, nodeptr->to);
             nodeptr=Merge(FreeMemTable,nodeptr);
             Initialize_Free_Entry(fe, nodeptr);
             AddFreeEntry(FreeMemTable, fe);
@@ -528,6 +625,16 @@ int Highest_Priority_First(struct priqueue* pq)
         {
             printf("Process %d finished execution. at time : %d\n", current_process->id, getClk());
             write_output_file(current_process, 1);
+            Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+            TreeNode* nodeptr = RemoveFromMemTable(MemTable, current_process->id);
+            write_memory_file(0, current_process, nodeptr->from, nodeptr->to);
+            nodeptr=Merge(FreeMemTable,nodeptr);
+            Initialize_Free_Entry(fe, nodeptr);
+            AddFreeEntry(FreeMemTable, fe);
+            printf("------------- A process has Finished ------- \n");
+            
+            printFreeMemTable(FreeMemTable);
+            printMemTable(MemTable);
             finished_processes++;
             count--;
             kill(current_process->pid, SIGKILL);
