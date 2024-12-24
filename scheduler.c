@@ -19,7 +19,7 @@ int noofprocess;
 Memory_Table* MemTable;
 Free_Memory_Table* FreeMemTable; // Don't Forget to free
 BinaryTree* Tree;
-struct priqueue* Waiting_Queue;
+struct priqueue* Waiting_Queue; //Queue for the processes that are waiting for memory
 
 //Pri-Queue
 struct priqueue* Processes_PriQueue;
@@ -272,28 +272,7 @@ int main(int argc, char *argv[])
                     printf("Process %d enqueued (arrival: %d, runtime: %d)\n",
                     message.process.id, message.process.arrivaltime, message.process.runningtime);
                 }
-                // struct node* new_node = (struct node*)malloc(sizeof(struct node));
-                // setnode(message.process, new_node);
-                // if(Processes_Queue->actualcount > 0){
-                // struct node* last_node = (struct node*)malloc(sizeof(struct node));
-                // struct PCB* current_process = NULL;
-                // current_process = (struct PCB*)malloc(sizeof(struct PCB));
-                // dequeue_from_back(Processes_Queue, current_process);
-                // setnode(*current_process, last_node);
-                // if(current_process->stoptime == getClk()){
-                // enqueue(new_node, Processes_Queue);
-                // enqueue(last_node, Processes_Queue);
-                // printf("Process %d preempted (remaining time: %d).\n",
-                // current_process->id, current_process->remainingTime);
-                // write_output_file(current_process, 2);
-                // }else{
-                // enqueue(last_node, Processes_Queue);
-                // enqueue(new_node, Processes_Queue);}
-                // }else{
-                // enqueue(new_node, Processes_Queue);
-                // }
-                // printf("Process %d enqueued (arrival: %d, runtime: %d)\n",
-                // message.process.id, message.process.arrivaltime, message.process.runningtime);
+                
             }
             else
             {
@@ -443,47 +422,31 @@ int main(int argc, char *argv[])
         // After receiving put the process sent in the queue/priqueue.
         
         switch (scheduling_algorithm){
-            case SJF: if (1)//if (Processes_PriQueue->actualcount > 0)
-            {
+            case SJF: 
                 Shortest_Job_First(Processes_PriQueue);
-                // pridequeue(&Processes_PriQueue->head->process, Processes_PriQueue);
-                //printf("Process %d with the following arrival time received successfully: %d \n",message.process.id,message.process.arrivaltime);
-                //count--; --> Decrement when we finish a process
-            }
-            break;
-            case RR: if (1)
-            {
+                break;
 
+
+            case RR: 
                 Round_Robin_Scheduling(Processes_Queue);
-            }   
-            break;  
-            case HPF: if (1)
-            {
-                //printf("this is the count of the priqueue %d \n",count);
+                break;  
+
+
+            case HPF: 
                 Highest_Priority_First(Processes_PriQueue);
-            }
-            break;
+                break;
+
             default: break;
         }   
-        //add rest of cases here
         
     }
     count=atoi(argv[3]);
-    // while((Processes_PriQueue->actualcount)>=0 && scheduling_algorithm==HPF)
-    // {
-    //     if(Highest_Priority_First(Processes_PriQueue)==1)
-    //     {
-    //         break;
-    //     }
-    // }
+
     while((Processes_Queue->actualcount)!=0 && scheduling_algorithm==RR)
     {
         Round_Robin_Scheduling(Processes_Queue);
     }
-    // while(finished_processes != atoi(argv[3]))
-    // {
 
-    // }
     write_performance_file(atoi(argv[3]));
     free(Processes_Queue);
     free(Processes_PriQueue);
@@ -794,184 +757,3 @@ int Highest_Priority_First(struct priqueue* pq)
     }
     last_time=current_time;
 }
-
-// int Highest_Priority_First(struct priqueue* pq)
-// {
-//     static struct PCB* current_process = NULL;
-//     static int last_time = -1;
-//     int current_time = getClk();
-//     if (!current_process && pq->actualcount > 0)
-//     {
-//         current_process = (struct PCB*) malloc(sizeof(struct PCB));
-//         pridequeue(current_process, pq);
-//         current_process->state = RUNNING;
-//         current_process->starttime = current_time;
-//         printf("Starting process %d (runtime: %d, start time: %d)\n",
-//         current_process->id, current_process->runningtime, current_process->starttime);
-//         current_process->waittime=getClk()-current_process->arrivaltime;
-//         write_output_file(current_process,0);
-//         current_process->pid = fork();
-//         if (current_process->pid == -1)
-//         {
-//             perror("Error While Forking.\n");
-//             exit(-4);
-//         }
-//         else if (current_process->pid == 0) //Child Process
-//         {
-//             char id[10];
-//             sprintf(id, "%d", current_process->id);
-//             char arr[10];
-//             sprintf(arr, "%d", current_process->arrivaltime);
-//             char run[10];
-//             sprintf(run, "%d", current_process->remainingTime);
-//             char pri[10];
-//             sprintf(pri, "%d", current_process->priority);
-//             char *arg[] = {"./process.out",id, arr, run, pri, NULL};
-
-//             execv("./process.out", arg);
-//             perror("Error in execv.\n");
-//             exit(-3);
-//         }
-//         //last_time = current_time; // This is the last time a process started
-        
-//     }
-
-//     else if (current_process && pq->actualcount > 0)
-//     {
-//         // Check the current_process with the head of the queue to see if the new process has a higher priority
-//         current_process->remainingTime -= (current_time - last_time);
-//         if (current_process->remainingTime <= 0)
-//         {
-//             printf("Process %d Finished at time %d.\n", current_process->id, getClk() );
-//             finished_processes++;
-//             write_output_file(current_process,1);
-//             kill(current_process->pid,SIGKILL);
-//             free(current_process);
-//             pridequeue(current_process, pq);            
-//             if(current_process->state == WAITING)
-//             {
-//                 current_process->state = RUNNING;
-//                 printf("Process %d continued at time %d with remaining time %d\n", current_process->id, getClk(),current_process->remainingTime);
-//                 current_process->waittime += getClk()-current_process->stoptime;
-//                 write_output_file(current_process,3);
-//                 kill(current_process->pid, SIGCONT);
-//             }
-//             else
-//             {
-//                 printf("Process %d Started at time %d.\n", current_process->id, getClk());
-//                 current_process->waittime=getClk()-current_process->arrivaltime;
-//                 write_output_file(current_process,0);          
-//                 current_process->pid = fork();
-//                 if (current_process->pid == -1)
-//                 {
-//                     perror("Error While Forking.\n");
-//                     exit(-4);
-//                 }
-//                 else if (current_process->pid == 0) //Child Process
-//                 {
-//                     char id[10];
-//                     sprintf(id, "%d", current_process->id);
-//                     char arr[10];
-//                     sprintf(arr, "%d", current_process->arrivaltime);
-//                     char run[10];
-//                     sprintf(run, "%d", current_process->remainingTime);
-//                     char pri[10];
-//                     sprintf(pri, "%d", current_process->priority);
-//                     char *arg[] = {"./process.out",id, arr, run, pri, NULL};
-//                     execv("./process.out", arg);
-//                     perror("Error in execv.\n");
-//                     exit(-3);
-//                 }
-//                 //last_time = current_time; // This is the last time a process started   
-//             }
-//         }
-//         else if (pq->head->pri < current_process->priority)
-//         {
-//             // Need to preempt the current_process and start the new process
-//             //Stop the running process
-//             printf("Process %d preempted (remaining time: %d).\n",
-//             current_process->id, current_process->remainingTime);
-//             current_process->state = WAITING;
-//             current_process->stoptime=getClk();
-//             write_output_file(current_process,2);
-//             kill(current_process->pid, SIGSTOP);
-//             last_time=current_time;
-//             struct prinode* new_node = (struct prinode*)malloc(sizeof(struct prinode));
-//             setprinode(*current_process, current_process->priority, WAITING,new_node);
-//             prienqueue(pq, new_node);
-//             free(current_process);
-//             pridequeue(current_process, pq);
-//             if(current_process->state == WAITING)
-//             {
-//                 current_process->state = RUNNING;
-//                 printf("Process %d continued at time %d.\n", current_process->id, getClk());
-//                 current_process->waittime += getClk()-current_process->stoptime;
-//                 write_output_file(current_process,3);
-//                 kill(current_process->pid, SIGCONT);
-//             }
-//             else
-//             {
-//                 printf("Process %d Started at time %d.\n", current_process->id, getClk());
-//                 current_process->waittime=getClk()-current_process->arrivaltime;
-//                 write_output_file(current_process,0);       
-//                 current_process->pid = fork();
-//                 if (current_process->pid == -1)
-//                 {
-//                     perror("Error While Forking.\n");
-//                     exit(-4);
-//                 }
-//                 else if (current_process->pid == 0) //Child Process
-//                 {
-//                     char id[10];
-//                     sprintf(id, "%d", current_process->id);
-//                     char arr[10];
-//                     sprintf(arr, "%d", current_process->arrivaltime);
-//                     char run[10];
-//                     sprintf(run, "%d", current_process->remainingTime);
-//                     char pri[10];
-//                     sprintf(pri, "%d", current_process->priority);
-//                     char *arg[] = {"./process.out",id, arr, run, pri, NULL};
-//                     execv("./process.out", arg);
-//                     perror("Error in execv.\n");
-//                     exit(-3);
-//                 }
-//             }
-//             // Fork Or SIGCONT
-//             last_time = current_time;
-//         }
-//         // Else do nothing since the running process is of already higher priority
-//     }
-//     else if(pq->actualcount ==0 && noofprocess-finished_processes==1&&current_process)
-//     {
-//         current_process->remainingTime -= (current_time - last_time);
-//         if(current_process->remainingTime<=0)
-//         {
-//             printf("Process %d Finished at time %d.\n", current_process->id, getClk()); 
-//             write_output_file(current_process,1);
-//             kill(current_process->pid,SIGKILL);
-//             finished_processes++;  
-//             return 1;
-//         }
-//     }
-//     else if(current_process &&pq->actualcount==0&& noofprocess-finished_processes!=1)
-//     {
-//         current_process->remainingTime -= (current_time - last_time);
-//         if(current_process->remainingTime<=0)
-//         {
-//             printf("Process %d Finished at time %d.\n", current_process->id, getClk() ); 
-//             write_output_file(current_process,1);
-//             kill(current_process->pid,SIGKILL);
-//             finished_processes++;  
-//             current_process=NULL;
-//             return 0;
-//         }   
-//     }
-//     last_time=current_time;
-//     return 0;
-//     // Parent
-//     // The parent should constantly look up for any changes in the priqueue 
-//     // (if the head of the priqueue has a higher priority than the running process) 
-//     // then we should preempt (SIGSTOP) the running process and fork this new process
-//     // Then after this process finishes we should check whether we will SIGCONT the stopped
-//     // process or fork another process
-// }

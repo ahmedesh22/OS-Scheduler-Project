@@ -166,12 +166,9 @@ int main(int argc, char *argv[])
         
         if (Processes_Queue->head->item.arrivaltime == getClk())
         {
-            //Dequeue(Processes_Queue, Current);
-            //message.process=Current->item;
+
             dequeue(Processes_Queue,&message.process);
-            //printf("id : %d arr: %d run: %d pri: %d \n",message.process.id,message.process.arrivaltime,message.process.runningtime,message.process.priority);
             message.mtype = 1;
-            //printf("message   %d \n",msg_qid);
             if (msgsnd(msg_qid, &message, sizeof(message.process), IPC_NOWAIT) == -1)
             {
                 perror("Error sending message");
@@ -191,7 +188,6 @@ int main(int argc, char *argv[])
 void clearResources(int signum)
 {
     msgctl(msg_qid,IPC_RMID, (struct msqid_ds *)0); 
-    // kill(getpid(), SIGKILL);
     kill(pid_schd, SIGKILL);
     wait((void *) 0);
     kill(pid_clk, SIGKILL);
