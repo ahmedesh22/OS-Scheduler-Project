@@ -21,6 +21,19 @@ void setprinode(struct PCB item,int priority,P_state state,struct prinode *node)
     node->process.state=state;
     
 }
+
+void Node_to_PriNode(struct node *node,struct prinode *prinode)
+{
+    if(node==NULL || prinode==NULL)
+    {
+        return;
+    }
+    prinode->process=node->item;
+    prinode->pri=node->item.memorysize;
+    prinode->next =NULL;
+    prinode->process.state=node->item.state;
+}
+
 struct priqueue
 {
     struct prinode * head;

@@ -199,26 +199,101 @@ int main(int argc, char *argv[])
             {
                 struct node* new_node = (struct node*)malloc(sizeof(struct node));
                 setnode(message.process, new_node);
-                if(Processes_Queue->actualcount > 0){
-                struct node* last_node = (struct node*)malloc(sizeof(struct node));
-                struct PCB* current_process = NULL;
-                current_process = (struct PCB*)malloc(sizeof(struct PCB));
-                dequeue_from_back(Processes_Queue, current_process);
-                setnode(*current_process, last_node);
-                if(current_process->stoptime == getClk()){
-                enqueue(new_node, Processes_Queue);
-                enqueue(last_node, Processes_Queue);
-                printf("Process %d preempted (remaining time: %d).\n",
-                current_process->id, current_process->remainingTime);
-                write_output_file(current_process, 2);
-                }else{
-                enqueue(last_node, Processes_Queue);
-                enqueue(new_node, Processes_Queue);}
-                }else{
-                enqueue(new_node, Processes_Queue);
+
+                //Check if the proccess can be allocated or not 
+                Free_Entry* free_e = CanAllocate(FreeMemTable, new_node->item.memorysize);
+                if (free_e == NULL) // the process cannot be allocated
+                {
+                    struct prinode* temp_priNode = (struct prinode*) malloc(sizeof(struct prinode));
+                    Node_to_PriNode(new_node, temp_priNode); 
+                    // Enqueue in the waiting queue
+                    priwaitenqueue(Waiting_Queue, temp_priNode);
                 }
-                printf("Process %d enqueued (arrival: %d, runtime: %d)\n",
-                message.process.id, message.process.arrivaltime, message.process.runningtime);
+                else
+                {
+                    // Now, the process can be allocated, check whether it needs splitting or not
+                    if (CheckSize(new_node->item.memorysize, free_e->size) == 1)
+                    {
+                        // We can Split
+                        // Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+                        TreeNode* parent = RemoveFromFreeMemTable(FreeMemTable, free_e);
+                        printf("After Free Memory Removal: Split\n");
+                        //printFreeMemTable(FreeMemTable);
+                        //printf("-------------\n");
+                        TreeNode* ptr = Split(FreeMemTable, parent, new_node->item.memorysize);
+
+                        Entry* e = (Entry*) malloc(sizeof(Entry));
+                        Initialize_Entry(e, new_node->item.id, ptr);
+                        AddEntry(MemTable, e);
+                        printFreeMemTable(FreeMemTable);
+                        printMemTable(MemTable);
+                    }
+                    else
+                    {
+                        // Here no need to split
+                        free_e->node->status = 1; // Allocated
+                        // Add this entry to Memory Table
+                        Entry* e = (Entry*) malloc(sizeof(Entry));
+                        Initialize_Entry(e, new_node->item.id, free_e->node);
+                        AddEntry(MemTable, e);
+                        // Remove this entry from Free Memory Table
+                        RemoveFromFreeMemTable(FreeMemTable, free_e);
+                        printf("After Free Memory Removal: withu spliting\n");
+                        printFreeMemTable(FreeMemTable);
+                        printMemTable(MemTable);
+                    }
+                    write_memory_file(1, &new_node->item, MemTable->head->Block->from, MemTable->head->Block->to);
+                    printf("enqueued id: %d\n", new_node->item.id);
+                    if(Processes_Queue->actualcount > 0)
+                    {
+                        struct node* last_node = (struct node*)malloc(sizeof(struct node));
+                        struct PCB* current_process = NULL;
+                        current_process = (struct PCB*)malloc(sizeof(struct PCB));
+                        dequeue_from_back(Processes_Queue, current_process);
+                        setnode(*current_process, last_node);
+                        if(current_process->stoptime == getClk())
+                        {
+                            enqueue(new_node, Processes_Queue);
+                            enqueue(last_node, Processes_Queue);
+                            printf("Process %d preempted (remaining time: %d).\n",
+                            current_process->id, current_process->remainingTime);
+                            write_output_file(current_process, 2);
+                        }
+                        else
+                        {
+                            enqueue(last_node, Processes_Queue);
+                            enqueue(new_node, Processes_Queue);
+                        }
+                    }
+                    else
+                    {
+                        enqueue(new_node, Processes_Queue);
+                    }
+                    printf("Process %d enqueued (arrival: %d, runtime: %d)\n",
+                    message.process.id, message.process.arrivaltime, message.process.runningtime);
+                }
+                // struct node* new_node = (struct node*)malloc(sizeof(struct node));
+                // setnode(message.process, new_node);
+                // if(Processes_Queue->actualcount > 0){
+                // struct node* last_node = (struct node*)malloc(sizeof(struct node));
+                // struct PCB* current_process = NULL;
+                // current_process = (struct PCB*)malloc(sizeof(struct PCB));
+                // dequeue_from_back(Processes_Queue, current_process);
+                // setnode(*current_process, last_node);
+                // if(current_process->stoptime == getClk()){
+                // enqueue(new_node, Processes_Queue);
+                // enqueue(last_node, Processes_Queue);
+                // printf("Process %d preempted (remaining time: %d).\n",
+                // current_process->id, current_process->remainingTime);
+                // write_output_file(current_process, 2);
+                // }else{
+                // enqueue(last_node, Processes_Queue);
+                // enqueue(new_node, Processes_Queue);}
+                // }else{
+                // enqueue(new_node, Processes_Queue);
+                // }
+                // printf("Process %d enqueued (arrival: %d, runtime: %d)\n",
+                // message.process.id, message.process.arrivaltime, message.process.runningtime);
             }
             else
             {
@@ -313,6 +388,54 @@ int main(int argc, char *argv[])
                     }
                 }
                 
+                
+
+                if((scheduling_algorithm == RR)&&Waiting_Queue->head)
+                {   
+                    
+                    Free_Entry* free_e = CanAllocate(FreeMemTable, Waiting_Queue->head->process.memorysize);
+                    if (free_e) // if the smallest memory size process waiting can be allocated
+                    {   printf("wait can be allocated\n");
+                        struct PCB* process=(struct PCB*)malloc(sizeof(struct PCB));
+                        pridequeue(process,Waiting_Queue);
+                        printf("b3d el dequeue id %d \n",process->id);
+                        struct node* new_node = (struct node*)malloc(sizeof(struct node));
+                        setnode(*process, new_node);
+                        if (CheckSize(new_node->item.memorysize, free_e->size) == 1)
+                        {
+                            // We can Split
+                            // Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+                            TreeNode* parent = RemoveFromFreeMemTable(FreeMemTable, free_e);
+                            printf("From WAiting After Free Memory Removal: Split\n");
+                            //printFreeMemTable(FreeMemTable);
+                            //printf("-------------\n");
+                            TreeNode* ptr = Split(FreeMemTable, parent, new_node->item.memorysize);
+
+                            Entry* e = (Entry*) malloc(sizeof(Entry));
+                            Initialize_Entry(e, new_node->item.id, ptr);
+                            AddEntry(MemTable, e);
+                            printFreeMemTable(FreeMemTable);
+                            printMemTable(MemTable);
+                        }
+                        else
+                        {
+                            // Here no need to split
+                            free_e->node->status = 1; // Allocated
+                            // Add this entry to Memory Table
+                            Entry* e = (Entry*) malloc(sizeof(Entry));
+                            Initialize_Entry(e,new_node->item.id, free_e->node);
+                            AddEntry(MemTable, e);
+                            // Remove this entry from Free Memory Table
+                            RemoveFromFreeMemTable(FreeMemTable, free_e);
+                            printf("From WaitingAfter Free Memory Removal: withu spliting\n");
+                            printFreeMemTable(FreeMemTable);
+                            printMemTable(MemTable);
+                        }
+                        enqueue(new_node, Processes_Queue);
+                        printf("enqueued From Waiting id: %d\n", new_node->item.id);
+                        free(process);
+                    }
+                }
                 break;
             }
         }
@@ -539,6 +662,18 @@ void Round_Robin_Scheduling(queue* Processes_Queue)
                 // Process finished
                 printf("Process %d finished execution. at time : %d\n", current_process->id, getClk());
                 write_output_file(current_process, 1);
+
+                Free_Entry* fe = (Free_Entry*) malloc(sizeof(Free_Entry));
+                TreeNode* nodeptr = RemoveFromMemTable(MemTable, current_process->id);
+                write_memory_file(0, current_process, nodeptr->from, nodeptr->to);
+                nodeptr=Merge(FreeMemTable,nodeptr);
+                Initialize_Free_Entry(fe, nodeptr);
+                AddFreeEntry(FreeMemTable, fe);
+                printf("------------- A process has Finished ------- \n");
+                
+                printFreeMemTable(FreeMemTable);
+                printMemTable(MemTable);
+
                 finished_processes++;
                 count--;
                 kill(current_process->pid, SIGKILL);
